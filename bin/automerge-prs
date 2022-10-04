@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ -z "${GITHUB_TOKEN:-""}" ]]; then
+  echo "GITHUB_TOKEN not set" >&2
+  exit 1
+fi
+
+if (($# != 3)); then
+  echo "Usage: automerge-prs <owner/repo> <quarantine-days> <strategy>" >&2
+  exit 64
+fi
+
+repo=$1
+quarantine_days=$2
+strategy=$3
+
+if [[ ! "$strategy" =~ merge|rebase|squash ]]; then
+  echo "Invalid strategy: must be merge, rebase, or squash" >&2
+  exit 64
+fi
+
+: "${DRY_RUN:=0}"
+
+gh_pr() {
+  gh pr --repo "$repo" "$@"
+}
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+now_s=$(date +"%s")
+since_s=$((now_s - (quarantine_days * 24 * 60 * 60)))
+since=$(date -d "@$since_s" +"%Y-%m-%d")
+
+gh_pr list --limit 1000 --json number,title,author,updatedAt,reviewDecision |
+  jq --compact-output ".[] |
+    select(.author.login == \"dependabot\") |
+    select(.updatedAt <= \"$since\")
+  " | while read -r ln; do
+  number=$(jq --raw-output '.number' <<<"$ln")
+  echo "$ln" >"$tmp/$number.json"
+done
+
+found=0
+
+for json in "$tmp"/*.json; do
+  number=$(jq --raw-output '.number' "$json")
+  title=$(jq --raw-output '.title' "$json")
+  updatedAt=$(jq --raw-output '.updatedAt' "$json")
+  reviewDecision=$(jq --raw-output '.reviewDecision' "$json")
+  found=1
+
+  printf '%s (#\e[34m%s\e[0m)\n' "$title" "$number"
+  printf '  Last updated: \e[35m%s\e[0m\n' "$updatedAt"
+  printf '  Current review decision: \e[35m%s\e[0m\n' "$reviewDecision"
+
+  case "$reviewDecision" in
+    CHANGES_REQUESTED)
+      printf '  \e[1;37m=>\e[0m \e[33mSkip\e[0m\n'
+      ;;
+    APPROVED)
+      printf '  \e[1;37m=>\e[0m \e[32mEnable auto-merge\e[0m\n'
+
+      if ((!DRY_RUN)); then
+        gh_pr merge --auto "$number"
+      fi
+      ;;
+    *)
+      printf '  \e[1;37m=>\e[0m \e[32mApprove and enable auto-merge\e[0m\n'
+      if ((!DRY_RUN)); then
+        gh_pr review --approve "$number"
+        gh_pr merge --auto "$number" --"$strategy"
+      fi
+      ;;
+  esac
+done
+
+if ((!found)); then
+  echo "No Dependabot PRs found older than $since."
+fi

@@ -1,0 +1,45 @@
+name: mergeabot
+description: Auto-merge Dependabot PRs, only after quarantine days
+
+inputs: {}
+  quarantine-days:
+    description: |
+      How long PRs must have gone since their last update to qualify for
+      auto-merge. Default is 5, Set to -1 to disable
+    required: true
+    default: 5
+
+  strategy:
+    description: How to merge PRs, must be one of merge, rebase, or squash
+    required: true
+    default: rebase
+
+  github-repository:
+    description: "Override GitHub repository, if necessary"
+    required: true
+    default: "${{ github.repository }}"
+
+  github-token:
+    description: "Override GitHub token, if necessary"
+    required: true
+    default: "${{ github.token }}"
+
+  dry-run:
+    descriptoin: "Set to 1 to print, but not perform, any actions"
+    required: true
+    default: 0
+
+outputs: {}
+
+runs:
+  using: composite
+  steps:
+    - name: Auto-merge Dependabot PRs
+      shell: bash
+      run: |
+        DRY_RUN=${{ inputs.dry-run }}
+
+        ${{ github.action_path }}/bin/automerge-prs \
+          ${{ inputs.github-repository }} \
+          ${{ inputs.quarantine-days }} \
+          ${{ inputs.strategy }}
