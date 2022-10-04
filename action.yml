@@ -38,6 +38,7 @@ runs:
       shell: bash
       run: |
         DRY_RUN=${{ inputs.dry-run }}
+        GITHUB_TOKEN=${{ inputs.github-token }}
 
         ${{ github.action_path }}/bin/automerge-prs \
           ${{ inputs.github-repository }} \

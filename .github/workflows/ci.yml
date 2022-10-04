@@ -14,5 +14,5 @@ jobs:
         with:
           quarantine-days: -1
           github-token: ${{ secrets.FRECKLE_AUTOMATION_GITHUB_TOKEN }}
-          repo: freckle/megarepo
+          github-repository: freckle/megarepo
           dry-run: 1
