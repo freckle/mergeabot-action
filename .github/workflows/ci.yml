@@ -8,6 +8,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
+      # Run once with settings that are sure to find nothing (this repository
+      # has nothing being kept up to date).
+      - uses: ./
+        with:
+          dry-run: 1
+
+      # Run again with settings that are sure to find something (this repository
+      # is really active and should always have open dependabot PRs).
       - uses: ./
         with:
           quarantine-days: -1
