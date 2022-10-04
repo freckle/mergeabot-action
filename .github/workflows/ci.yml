@@ -8,9 +8,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
+      # Run once with settings that are sure to find something
       - uses: ./
         with:
           quarantine-days: -1
+          github-token: ${{ secrets.FRECKLE_AUTOMATION_GITHUB_TOKEN }}
+          github-repository: freckle/megarepo
+          dry-run: 1
+
+      # Run again with settings that are sure to find nothing
+      - uses: ./
+        with:
+          quarantine-days: 999
           github-token: ${{ secrets.FRECKLE_AUTOMATION_GITHUB_TOKEN }}
           github-repository: freckle/megarepo
           dry-run: 1
