@@ -9,7 +9,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # Run once with settings that are sure to find something
+      # Run once with settings that are sure to find nothing (this repository
+      # has nothign being kept up to date).
+      - uses: ./
+        with:
+          dry-run: 1
+
+      # Run again with settings that are sure to find something (this repository
+      # is really active and should always have open dependeabot PRs).
       - uses: ./
         with:
           quarantine-days: -1
@@ -17,10 +24,3 @@ jobs:
           github-repository: freckle/megarepo
           dry-run: 1
 
-      # Run again with settings that are sure to find nothing
-      - uses: ./
-        with:
-          quarantine-days: 999
-          github-token: ${{ secrets.FRECKLE_AUTOMATION_GITHUB_TOKEN }}
-          github-repository: freckle/megarepo
-          dry-run: 1
