@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+shopt -s nullglob
+
 if [[ -z "${GITHUB_TOKEN:-""}" ]]; then
   echo "GITHUB_TOKEN not set" >&2
   exit 1
