@@ -62,7 +62,7 @@ for json in "$tmp"/*.json; do
     APPROVED)
       printf '  \e[1;37m=>\e[0m \e[32mEnable auto-merge\e[0m\n'
       if ((!DRY_RUN)); then
-        gh_pr merge --auto "$number"
+        gh_pr merge --auto "$number" --"$strategy"
       fi
       ;;
     *)
