@@ -23,4 +23,3 @@ jobs:
           github-token: ${{ secrets.FRECKLE_AUTOMATION_GITHUB_TOKEN }}
           github-repository: freckle/megarepo
           dry-run: 1
-
