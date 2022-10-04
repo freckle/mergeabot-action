@@ -23,8 +23,8 @@ implements.
 
 ```yaml
 on:
- schedule:
-   # ...
+  schedule:
+    # ...
 
 jobs:
   mergabot:
