@@ -1,7 +1,7 @@
 name: mergeabot
 description: Auto-merge Dependabot PRs, only after quarantine days
 
-inputs: {}
+inputs:
   quarantine-days:
     description: |
       How long PRs must have gone since their last update to qualify for
