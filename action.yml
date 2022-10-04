@@ -37,8 +37,8 @@ runs:
     - name: Auto-merge Dependabot PRs
       shell: bash
       run: |
-        DRY_RUN=${{ inputs.dry-run }}
-        GITHUB_TOKEN=${{ inputs.github-token }}
+        export GITHUB_TOKEN=${{ inputs.github-token }}
+        export DRY_RUN=${{ inputs.dry-run }}
 
         ${{ github.action_path }}/bin/automerge-prs \
           ${{ inputs.github-repository }} \
