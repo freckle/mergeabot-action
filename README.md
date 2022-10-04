@@ -10,7 +10,7 @@ security-related patches may not be applied in a timely fashion.
 Dependabot and timely merges of its PRs is a solution to this. Requiring manual
 approval and merge of such PRs is typically busy work. With robust CI and QA
 processes, such PRs should be a "merge on Green" scenario for your team. Any
-process of an Engineer taking an action without tough should be automated.
+process of an Engineer taking an action without thought should be automated.
 
 Immediately merging new versions of dependencies is _also_ a Software Supply
 Chain risk, as so-far-un-discovered exploits could exist in very new patches.
@@ -27,7 +27,7 @@ on:
     # ...
 
 jobs:
-  mergabot:
+  mergeabot:
     runs-on: ubuntu-latest
     steps:
       - uses: freckle/mergeabot-action@v1

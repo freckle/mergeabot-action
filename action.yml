@@ -25,7 +25,7 @@ inputs:
     default: "${{ github.token }}"
 
   dry-run:
-    descriptoin: "Set to 1 to print, but not perform, any actions"
+    description: "Set to 1 to print, but not perform, any actions"
     required: true
     default: 0
 
