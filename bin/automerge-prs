@@ -33,14 +33,14 @@ now_s=$(date +"%s")
 since_s=$((now_s - (quarantine_days * 24 * 60 * 60)))
 since=$(date -d "@$since_s" +"%Y-%m-%d")
 
-gh_pr list --limit 1000 --json number,title,author,updatedAt,reviewDecision |
-  jq --compact-output ".[] |
-    select(.author.login == \"dependabot\") |
-    select(.updatedAt <= \"$since\")
-  " | while read -r ln; do
-  number=$(jq --raw-output '.number' <<<"$ln")
-  echo "$ln" >"$tmp/$number.json"
-done
+search="author:app/dependabot updated:<$since"
+fields='number,title,author,updatedAt,reviewDecision'
+
+gh_pr list --search "$search" --limit 1000 --json "$fields" --jq '.[]' |
+  while IFS=$'\n' read -r ln; do
+    number=$(jq --raw-output '.number' <<<"$ln")
+    echo "$ln" >"$tmp/$number.json"
+  done
 
 found=0
 
