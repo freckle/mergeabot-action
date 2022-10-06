@@ -49,6 +49,22 @@ See [`action.yml`](./action.yml) for other, seldom useful, inputs.
 
 None.
 
+## Caveats
+
+This Action really only makes sense if Branch Protection is enabled. This is
+because it doesn't actually merge the PR, it enables auto-merge. That way,
+requiring that status checks are passing is handled correctly.
+
+If you use this Action in a project without Branch Protection, you will see
+
+```
+Message: ["Pull request Protected branch rules not configured for this branch"], Locations: [{Line:1 Column:72}]
+```
+
+PRs are welcome to make this use-case work, though it will require more
+complexity than simply an option not to use `--auto` with `gh merge`, since some
+manual handling of status checks would now be required.
+
 ---
 
 [LICENSE](./LICENSE)
