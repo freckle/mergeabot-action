@@ -8,14 +8,15 @@ if [[ -z "${GITHUB_TOKEN:-""}" ]]; then
   exit 1
 fi
 
-if (($# != 3)); then
-  echo "Usage: automerge-prs <owner/repo> <quarantine-days> <strategy>" >&2
+if (($# < 3)); then
+  echo "Usage: automerge-prs <owner/repo> <quarantine-days> <strategy> [exclude-title-regex]" >&2
   exit 64
 fi
 
 repo=$1
 quarantine_days=$2
 strategy=$3
+exclude_title_regex=${4:-""}
 
 if [[ ! "$strategy" =~ merge|rebase|squash ]]; then
   echo "Invalid strategy: must be merge, rebase, or squash" >&2
@@ -57,9 +58,14 @@ for json in "$tmp"/*.json; do
   printf '  Last updated: \e[35m%s\e[0m\n' "$updatedAt"
   printf '  Current review decision: \e[35m%s\e[0m\n' "$reviewDecision"
 
+  if [[ -n "$exclude_title_regex" ]] && [[ "$title" =~ $exclude_title_regex ]]; then
+    printf '  \e[1;37m=>\e[0m \e[33mSkip\e[0m (title matches exclude-title-regex)\n'
+    continue
+  fi
+
   case "$reviewDecision" in
     CHANGES_REQUESTED)
-      printf '  \e[1;37m=>\e[0m \e[33mSkip\e[0m\n'
+      printf '  \e[1;37m=>\e[0m \e[33mSkip\e[0m (changes requested)\n'
       ;;
     APPROVED)
       printf '  \e[1;37m=>\e[0m \e[32mEnable auto-merge\e[0m\n'

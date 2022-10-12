@@ -2,6 +2,11 @@ name: mergeabot
 description: Auto-merge Dependabot PRs, only after quarantine days
 
 inputs:
+  exclude-title-regex:
+    description: Exclude PRs whose titles match this regular expression
+    required: true
+    default: ""
+
   quarantine-days:
     description: |
       How long PRs must have gone since their last update to qualify for
@@ -43,4 +48,5 @@ runs:
         ${{ github.action_path }}/bin/automerge-prs \
           ${{ inputs.github-repository }} \
           ${{ inputs.quarantine-days }} \
-          ${{ inputs.strategy }}
+          ${{ inputs.strategy }} \
+          '${{ inputs.exclude-title-regex }}'
