@@ -24,10 +24,10 @@ jobs:
           github-repository: freckle/megarepo
           dry-run: 1
 
-      # Run again exercising exclude-regex
+      # Run again exercising exclude-title-regex
       - uses: ./
         with:
-          exclude-regex: 'in /qa$'
+          exclude-title-regex: 'in /qa$'
           quarantine-days: -1
           github-token: ${{ secrets.FRECKLE_AUTOMATION_GITHUB_TOKEN }}
           github-repository: freckle/megarepo
