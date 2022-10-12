@@ -35,6 +35,15 @@ jobs:
 
 ## Inputs
 
+- `exclude-title-regex`: exclude PRs whose titles match this regular expression
+
+  Dependabot PRs follow the format `Bump {dep} to {version} in /{path}`, so this
+  can be used to exclude PRs of certain dependencies or in certain directories.
+
+  Note that GitHub could change this format at any time. If this happens, you
+  would have `{quarantine-days}` days to notice and update your setting if
+  necessary.
+
 - `quarantine-days`: how many days since the last update on a PR before it
   qualifies for auto-merge. Default is 5.
 
