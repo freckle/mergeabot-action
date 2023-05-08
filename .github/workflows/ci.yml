@@ -32,3 +32,8 @@ jobs:
           github-token: ${{ secrets.FRECKLE_AUTOMATION_GITHUB_TOKEN }}
           github-repository: freckle/megarepo
           dry-run: 1
+
+      # Finally run as if we were a Dependabot-PR, so we can see the comment
+      - uses: ./
+        with:
+          github-actor: 'dependabot[bot]'
