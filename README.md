@@ -23,6 +23,11 @@ implements.
 
 ```yaml
 on:
+  # When run on a Dependabot PR itself, we will leave a comment to indicate that
+  # we will be automatically handling this PR for you.
+  pull_request:
+
+  # Otherwise, we will search and handle any open Dependabot PRs
   schedule:
     # ...
 
