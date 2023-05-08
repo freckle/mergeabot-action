@@ -41,12 +41,12 @@ runs:
   steps:
     - name: Auto-merge Dependabot PRs
       shell: bash
-      run: |
-        export GITHUB_TOKEN=${{ inputs.github-token }}
-        export DRY_RUN=${{ inputs.dry-run }}
+      run: ${{ github.action_path }}/bin/automerge-prs
+      env:
+        EXCLUDE_TITLE_REGEX: ${{ inputs.exclude-title-regex }}
+        QUARANTINE_DAYS: ${{ inputs.quarantine-days }}
+        STRATEGY: ${{ inputs.strategy }}
+        DRY_RUN: ${{ inputs.dry-run }}
 
-        ${{ github.action_path }}/bin/automerge-prs \
-          ${{ inputs.github-repository }} \
-          ${{ inputs.quarantine-days }} \
-          ${{ inputs.strategy }} \
-          '${{ inputs.exclude-title-regex }}'
+        GH_TOKEN: ${{ inputs.github-token }}
+        GH_REPO: ${{ inputs.github-repository }}

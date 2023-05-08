@@ -3,37 +3,26 @@ set -euo pipefail
 
 shopt -s nullglob
 
-if [[ -z "${GITHUB_TOKEN:-""}" ]]; then
-  echo "GITHUB_TOKEN not set" >&2
-  exit 1
-fi
-
-if (($# < 3)); then
-  echo "Usage: automerge-prs <owner/repo> <quarantine-days> <strategy> [exclude-title-regex]" >&2
-  exit 64
-fi
-
-repo=$1
-quarantine_days=$2
-strategy=$3
-exclude_title_regex=${4:-""}
-
-if [[ ! "$strategy" =~ merge|rebase|squash ]]; then
+if [[ ! "$STRATEGY" =~ merge|rebase|squash ]]; then
   echo "Invalid strategy: must be merge, rebase, or squash" >&2
   exit 64
 fi
 
 : "${DRY_RUN:=0}"
 
+exclude_by_title() {
+  [[ -n "$EXCLUDE_TITLE_REGEX" ]] && [[ "$1" =~ $EXCLUDE_TITLE_REGEX ]]
+}
+
 gh_pr() {
-  gh pr --repo "$repo" "$@"
+  gh pr --repo "$GH_REPO" "$@"
 }
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 now_s=$(date +"%s")
-since_s=$((now_s - (quarantine_days * 24 * 60 * 60)))
+since_s=$((now_s - (QUARANTINE_DAYS * 24 * 60 * 60)))
 since=$(date -d "@$since_s" +"%Y-%m-%d")
 
 search="author:app/dependabot updated:<$since"
@@ -58,7 +47,7 @@ for json in "$tmp"/*.json; do
   printf '  Last updated: \e[35m%s\e[0m\n' "$updatedAt"
   printf '  Current review decision: \e[35m%s\e[0m\n' "$reviewDecision"
 
-  if [[ -n "$exclude_title_regex" ]] && [[ "$title" =~ $exclude_title_regex ]]; then
+  if exclude_by_title "$title"; then
     printf '  \e[1;37m=>\e[0m \e[33mSkip\e[0m (title matches exclude-title-regex)\n'
     continue
   fi
@@ -70,14 +59,14 @@ for json in "$tmp"/*.json; do
     APPROVED)
       printf '  \e[1;37m=>\e[0m \e[32mEnable auto-merge\e[0m\n'
       if ((!DRY_RUN)); then
-        gh_pr merge --auto "$number" --"$strategy"
+        gh_pr merge --auto "$number" --"$STRATEGY"
       fi
       ;;
     *)
       printf '  \e[1;37m=>\e[0m \e[32mApprove and enable auto-merge\e[0m\n'
       if ((!DRY_RUN)); then
         gh_pr review --approve "$number"
-        gh_pr merge --auto "$number" --"$strategy"
+        gh_pr merge --auto "$number" --"$STRATEGY"
       fi
       ;;
   esac
