@@ -15,9 +15,7 @@ fi
 : "${GH_PR_TITLE:=""}"
 
 is_dependabot() {
-  [[ "$GH_ACTOR" == 'dependabot[bot]' ]] &&
-    [[ "$GH_EVENT" == 'pull_request' ]] &&
-    [[ "$GH_PR_ACTION" == 'opened' ]]
+  [[ "$GH_ACTOR" == 'dependabot[bot]' ]] && [[ "$GH_EVENT" == 'pull_request' ]]
 }
 
 exclude_by_title() {
@@ -32,15 +30,28 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 if is_dependabot && ! exclude_by_title "$GH_PR_TITLE"; then
-  cat >"$tmp" <<EOM
-This project uses [mergeabot][]. If all status checks pass, this PR will
-be automatically merged after $QUARANTINE_DAYS day(s). Any action taken on the PR
-will reset the clock.
+  now_s=$(date +"%s")
+  until_s=$((now_s + (QUARANTINE_DAYS * 24 * 60 * 60)))
+  until=$(date -d "@$until_s" +"%Y-%m-%d")
+
+  case "$GH_PR_ACTION" in
+    opened)
+      cat >"$tmp" <<EOM
+:heavy_check_mark: If all status checks pass, and no other reviews are submitted, [mergeabot][] will merge this PR after $QUARANTINE_DAYS day(s), on $until.
+
+As long as that's OK, no other action is necessary.
 
 [mergeabot]: https://github.com/freckle/mergeabot-action
-
-As long as that's OK, no review is necessary.
 EOM
+      ;;
+    *)
+      cat >"$tmp" <<EOM
+:clock1: Resetting [mergeabot][] another $QUARANTINE_DAYS day(s) to $until.
+
+[mergeabot]: https://github.com/freckle/mergeabot-action
+EOM
+      ;;
+  esac
 
   gh pr comment "$GH_PR" --body-file "$tmp"
   exit 0
