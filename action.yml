@@ -19,6 +19,11 @@ inputs:
     required: true
     default: rebase
 
+  github-actor:
+    description: "Override GitHub actor. This is mostly useful in testing."
+    required: true
+    default: "${{ github.actor }}"
+
   github-repository:
     description: "Override GitHub repository, if necessary"
     required: true
@@ -49,4 +54,8 @@ runs:
         DRY_RUN: ${{ inputs.dry-run }}
 
         GH_TOKEN: ${{ inputs.github-token }}
+        GH_ACTOR: ${{ inputs.github-actor }}
         GH_REPO: ${{ inputs.github-repository }}
+        GH_EVENT: ${{ github.event_name }}
+        GH_PR_ACTION: ${{ github.event.pull_request.action }}
+        GH_PR_TITLE: ${{ github.event.pull_request.title }}
