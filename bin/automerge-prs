@@ -12,6 +12,7 @@ fi
 : "${GH_ACTOR:=""}"
 : "${GH_EVENT:=""}"
 : "${GH_PR_ACTION:=""}"
+: "${GH_PR_NUMBER:=""}"
 : "${GH_PR_TITLE:=""}"
 
 is_dependabot() {
@@ -53,7 +54,7 @@ EOM
       ;;
   esac
 
-  gh pr comment "$GH_PR" --body-file "$tmp/message"
+  gh pr comment "$GH_PR_NUMBER" --body-file "$tmp/message"
   exit 0
 fi
 
