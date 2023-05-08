@@ -36,7 +36,7 @@ if is_dependabot && ! exclude_by_title "$GH_PR_TITLE"; then
 
   case "$GH_PR_ACTION" in
     opened)
-      cat >"$tmp" <<EOM
+      cat >"$tmp/message" <<EOM
 :heavy_check_mark: If all status checks pass, and no other reviews are submitted, [mergeabot][] will merge this PR after $QUARANTINE_DAYS day(s), on $until.
 
 As long as that's OK, no other action is necessary.
@@ -45,7 +45,7 @@ As long as that's OK, no other action is necessary.
 EOM
       ;;
     *)
-      cat >"$tmp" <<EOM
+      cat >"$tmp/message" <<EOM
 :clock1: Resetting [mergeabot][] another $QUARANTINE_DAYS day(s) to $until.
 
 [mergeabot]: https://github.com/freckle/mergeabot-action
@@ -53,7 +53,7 @@ EOM
       ;;
   esac
 
-  gh pr comment "$GH_PR" --body-file "$tmp"
+  gh pr comment "$GH_PR" --body-file "$tmp/message"
   exit 0
 fi
 
