@@ -57,5 +57,5 @@ runs:
         GH_ACTOR: ${{ inputs.github-actor }}
         GH_REPO: ${{ inputs.github-repository }}
         GH_EVENT: ${{ github.event_name }}
-        GH_PR_ACTION: ${{ github.event.pull_request.action }}
+        GH_PR_ACTION: ${{ github.event.action }}
         GH_PR_TITLE: ${{ github.event.pull_request.title }}
