@@ -31,14 +31,19 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 if is_dependabot && ! exclude_by_title "$GH_PR_TITLE"; then
-  now_s=$(date +"%s")
-  until_s=$((now_s + (QUARANTINE_DAYS * 24 * 60 * 60)))
-  until=$(date -d "@$until_s" +"%Y-%m-%d")
+  if ((QUARANTINE_DAYS <= 0)); then
+    when_message="the next time it runs"
+  else
+    now_s=$(date +"%s")
+    until_s=$((now_s + (QUARANTINE_DAYS * 24 * 60 * 60)))
+    until=$(date -d "@$until_s" +"%Y-%m-%d")
+    when_message="after $QUARANTINE_DAYS day(s), on $until"
+  fi
 
   case "$GH_PR_ACTION" in
     opened)
       cat >"$tmp/message" <<EOM
-:heavy_check_mark: If all status checks pass, and no other reviews are submitted, [mergeabot][] will merge this PR after $QUARANTINE_DAYS day(s), on $until.
+:heavy_check_mark: If all status checks pass, and no other reviews are submitted, [mergeabot][] will merge this PR $when_message."
 
 As long as that's OK, no other action is necessary.
 
@@ -47,7 +52,7 @@ EOM
       ;;
     *)
       cat >"$tmp/message" <<EOM
-:clock1: Resetting [mergeabot][] another $QUARANTINE_DAYS day(s) to $until.
+:clock1: PR was updated. [Mergeabot][] will now merge this PR $when_message.
 
 [mergeabot]: https://github.com/freckle/mergeabot-action
 EOM
