@@ -33,7 +33,13 @@ jobs:
           github-repository: freckle/megarepo
           dry-run: 1
 
-      # Finally run as if we were a Dependabot-PR, so we can see the comment
+      # Run as if we were a Dependabot-PR, so we can see the comment
       - uses: ./
         with:
+          github-actor: 'dependabot[bot]'
+
+      # And test the when-message conditional
+      - uses: ./
+        with:
+          quarantine-days: -1
           github-actor: 'dependabot[bot]'
