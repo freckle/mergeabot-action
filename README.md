@@ -30,6 +30,9 @@ on:
   # Otherwise, we will search and handle any open Dependabot PRs
   schedule:
     # ...
+    
+permissions:
+  pull-request: write
 
 jobs:
   mergeabot:
