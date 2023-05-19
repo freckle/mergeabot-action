@@ -19,22 +19,77 @@ Automatically merging Dependabot PRs _only after some number of days_ (i.e.
 after a "quarantine" period) is one mitigation for this, which this Action
 implements.
 
-## Usage
+## Events
+
+Mergeabot's primary feature is to find Dependabot PRs that have been open for
+your configured `quarantine-days` and merge them (technically, approve and
+enable auto-merge so that status and review requirements are met.):
+
+![Mergeabot example](./screenshots/example.png)
+
+We recommend running this once a day, e.g. at midnight UTC, through the
+`schedule` event:
 
 ```yaml
 on:
-  # When run on a Dependabot PR itself, we will leave a comment to indicate that
-  # we will be automatically handling this PR for you.
-  pull_request:
-
-  # Otherwise, we will search and handle any open Dependabot PRs
   schedule:
-    # ...
-    
+    cron: "0 0 * * *"
+```
+
+If this is all you do, the default permissions are acceptable and you can pretty
+much stop here.
+
+Our team uses `CODEOWNERS` and round-robins review-requests. This results in
+folks being requested to review Dependabot PRs. This is unnecessary and
+undesired; we want to leave these PRs to Mergeabot.
+
+To ameliorate this, we run Mergeabot on `pull_request` events too:
+
+```yaml
+on:
+  schedule:
+    cron: "0 0 * * *"
+
+  pull_request:
+```
+
+Mergeabot knows if it's running on a `pull_request` event in a Dependabot PR
+and, if so, leaves a comment on the PR indicating, roughly, "I got this."
+
+![Mergeabot comment on opened event](./screenshots/opened-comment.png)
+
+When configured this way, Mergeabot will run when the PR is opened or updated,
+so it can let you know that the updates have reset the clock on the quarantine:
+
+![Mergeabot comment on synchronized event](./screenshots/synchronized-comment.png)
+
+If you don't prefer this, just limit it to only `opened` events:
+
+```yaml
+on:
+  pull_request:
+    types: [opened]
+```
+
+## Permissions
+
+Dependabot PRs use a token with read-only permissions by default, so you'll need
+an explicit `permissions` key to use the above approach.
+
+```yaml
 permissions:
   contents: write
-  pull-request: write
+  pull-requests: write
+```
 
+**NOTE**: `contents:write` is required because Mergeabot will always do its
+normal thing of finding other Dependabot PRs and handling them. This may be
+surprising on PR events, but we find it useful. Patches welcome to make this
+behavior optional.
+
+## Usage
+
+```yaml
 jobs:
   mergeabot:
     runs-on: ubuntu-latest
