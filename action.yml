@@ -19,6 +19,11 @@ inputs:
     required: true
     default: rebase
 
+  remove-reviewers:
+    description: Remove any reviewers from Dependabot PRs when they open?
+    required: true
+    default: true
+
   github-actor:
     description: "Override GitHub actor. This is mostly useful in testing."
     required: true
@@ -51,6 +56,7 @@ runs:
         EXCLUDE_TITLE_REGEX: ${{ inputs.exclude-title-regex }}
         QUARANTINE_DAYS: ${{ inputs.quarantine-days }}
         STRATEGY: ${{ inputs.strategy }}
+        REMOVE_REVIEWERS: ${{ inputs.remove-reviewers }}
         DRY_RUN: ${{ inputs.dry-run }}
 
         GH_TOKEN: ${{ inputs.github-token }}
