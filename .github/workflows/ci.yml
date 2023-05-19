@@ -36,10 +36,12 @@ jobs:
       # Run as if we were a Dependabot-PR, so we can see the comment
       - uses: ./
         with:
+          remove-reviewers: false
           github-actor: 'dependabot[bot]'
 
       # And test the when-message conditional
       - uses: ./
         with:
           quarantine-days: -1
+          remove-reviewers: false
           github-actor: 'dependabot[bot]'
