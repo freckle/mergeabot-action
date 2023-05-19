@@ -27,6 +27,8 @@ enable auto-merge so that status and review requirements are met.):
 
 ![Mergeabot example](./screenshots/example.png)
 
+### `schedule`
+
 We recommend running this once a day, e.g. at midnight UTC, through the
 `schedule` event:
 
@@ -36,8 +38,7 @@ on:
     cron: "0 0 * * *"
 ```
 
-If this is all you do, the default permissions are acceptable and you can pretty
-much stop here.
+### `pull_request`
 
 Our team uses `CODEOWNERS` and round-robins review-requests. This results in
 folks being requested to review Dependabot PRs. This is unnecessary and
@@ -87,9 +88,21 @@ normal thing of finding other Dependabot PRs and handling them. This may be
 surprising on PR events, but we find it useful. Patches welcome to make this
 behavior optional.
 
-## Usage
+## Complete Example
 
 ```yaml
+name: Mergeabot
+
+on:
+  schedule:
+    cron: "0 0 * * *"
+
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   mergeabot:
     runs-on: ubuntu-latest
