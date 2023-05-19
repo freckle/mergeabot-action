@@ -32,6 +32,7 @@ on:
     # ...
     
 permissions:
+  contents: write
   pull-request: write
 
 jobs:
