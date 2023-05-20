@@ -23,7 +23,7 @@ implements.
 
 Mergeabot's primary feature is to find Dependabot PRs that have been open for
 your configured `quarantine-days` and merge them (technically, approve and
-enable auto-merge so that status and review requirements are met.):
+enable auto-merge so that status and review requirements are met):
 
 ![Mergeabot example](./screenshots/example.png)
 
