@@ -35,7 +35,7 @@ We recommend running this once a day, e.g. at midnight UTC, through the
 ```yaml
 on:
   schedule:
-    cron: "0 0 * * *"
+    - cron: "0 0 * * *"
 ```
 
 ### `pull_request`
@@ -49,7 +49,7 @@ To ameliorate this, we run Mergeabot on `pull_request` events too:
 ```yaml
 on:
   schedule:
-    cron: "0 0 * * *"
+    - cron: "0 0 * * *"
 
   pull_request:
 ```
@@ -95,7 +95,7 @@ name: Mergeabot
 
 on:
   schedule:
-    cron: "0 0 * * *"
+    - cron: "0 0 * * *"
 
   pull_request:
 
