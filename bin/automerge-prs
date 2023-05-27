@@ -44,7 +44,7 @@ if is_dependabot && ! exclude_by_title "$GH_PR_TITLE"; then
     opened)
       if [[ "$REMOVE_REVIEWERS" == 'true' ]]; then
         echo "Removing review requests"
-        gh api --repo "$GH_REPO" -X DELETE "repos/{owner}/{repo}/pulls/$GH_PR_NUMBER/review_requests"
+        gh api -X DELETE "repos/$GH_REPO/pulls/$GH_PR_NUMBER/review_requests"
       fi
 
       cat >"$tmp/message" <<EOM
