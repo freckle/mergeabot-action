@@ -43,8 +43,14 @@ if is_dependabot && ! exclude_by_title "$GH_PR_TITLE"; then
   case "$GH_PR_ACTION" in
     opened)
       if [[ "$REMOVE_REVIEWERS" == 'true' ]]; then
-        echo "Removing review requests"
-        gh api -X DELETE "repos/$GH_REPO/pulls/$GH_PR_NUMBER/requested_reviewers"
+        read -r users_json < <(gh api "repos/$GH_REPO/pulls/$GH_PR_NUMBER/requested_reviewers" | jq '[.users[].login]' -c)
+        read -r teams_json < <(gh api "repos/$GH_REPO/pulls/$GH_PR_NUMBER/requested_reviewers" | jq '[.teams[].name]' -c)
+
+        if [[ "$users_json" != '[]' ]] || [[ "$teams_json" != '[]' ]]; then
+          echo "Removing requested reviewers"
+          echo "{\"reviewers\":$users_json,\"team_reviewers\":$teams_json}" |
+            gh api -X DELETE --input - "repos/$GH_REPO/pulls/$GH_PR_NUMBER/requested_reviewers"
+        fi
       fi
 
       cat >"$tmp/message" <<EOM
