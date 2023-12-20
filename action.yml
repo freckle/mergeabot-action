@@ -66,3 +66,4 @@ runs:
         GH_PR_ACTION: ${{ github.event.action }}
         GH_PR_NUMBER: ${{ github.event.number }}
         GH_PR_TITLE: ${{ github.event.pull_request.title }}
+        GH_PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}

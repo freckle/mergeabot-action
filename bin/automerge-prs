@@ -14,6 +14,7 @@ fi
 : "${GH_PR_ACTION:=""}"
 : "${GH_PR_NUMBER:=""}"
 : "${GH_PR_TITLE:=""}"
+: "${GH_PR_HEAD_REF:=""}"
 
 is_dependabot() {
   [[ "$GH_ACTOR" == 'dependabot[bot]' ]] && [[ "$GH_EVENT" == 'pull_request' ]]
@@ -23,6 +24,10 @@ exclude_by_title() {
   [[ -n "$EXCLUDE_TITLE_REGEX" ]] && [[ "$1" =~ $EXCLUDE_TITLE_REGEX ]]
 }
 
+is_workflows_update() {
+  [[ "$1" =~ ^dependabot/github_actions/.* ]]
+}
+
 gh_pr() {
   gh pr --repo "$GH_REPO" "$@"
 }
@@ -30,7 +35,7 @@ gh_pr() {
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-if is_dependabot && ! exclude_by_title "$GH_PR_TITLE"; then
+if is_dependabot && ! exclude_by_title "$GH_PR_TITLE" && ! is_workflows_update "$GH_PR_HEAD_REF"; then
   if ((QUARANTINE_DAYS <= 0)); then
     when_message="the next time it runs"
   else
@@ -79,7 +84,7 @@ since_s=$((now_s - (QUARANTINE_DAYS * 24 * 60 * 60)))
 since=$(date -d "@$since_s" +"%Y-%m-%d")
 
 search="author:app/dependabot updated:<$since"
-fields='number,title,author,updatedAt,reviewDecision'
+fields='number,title,headRefName,author,updatedAt,reviewDecision'
 
 gh_pr list --search "$search" --limit 1000 --json "$fields" --jq '.[]' |
   while IFS=$'\n' read -r ln; do
@@ -92,6 +97,7 @@ found=0
 for json in "$tmp"/*.json; do
   number=$(jq --raw-output '.number' "$json")
   title=$(jq --raw-output '.title' "$json")
+  branch=$(jq --raw-output '.headRefName' "$json")
   updatedAt=$(jq --raw-output '.updatedAt' "$json")
   reviewDecision=$(jq --raw-output '.reviewDecision' "$json")
   found=1
@@ -102,6 +108,11 @@ for json in "$tmp"/*.json; do
 
   if exclude_by_title "$title"; then
     printf '  \e[1;37m=>\e[0m \e[33mSkip\e[0m (title matches exclude-title-regex)\n'
+    continue
+  fi
+
+  if is_workflows_update "$branch"; then
+    printf '  \e[1;37m=>\e[0m \e[33mSkip\e[0m (PR updates worflows)\n'
     continue
   fi
 
