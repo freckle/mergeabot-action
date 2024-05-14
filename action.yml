@@ -44,12 +44,20 @@ inputs:
     required: true
     default: 0
 
-outputs: {}
+outputs:
+  failed:
+    description: "Was mergeabot unable to process any PRs?"
+    value: ${{ steps.automerge.outputs.failed }}
+
+  failed-urls:
+    description: "List of PRs which were unable to be processed"
+    value: ${{ steps.automerge.outputs.failed-urls }}
 
 runs:
   using: composite
   steps:
-    - name: Auto-merge Dependabot PRs
+    - id: automerge
+      name: Auto-merge Dependabot PRs
       shell: bash
       run: ${{ github.action_path }}/bin/automerge-prs
       env:

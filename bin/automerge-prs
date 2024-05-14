@@ -20,6 +20,9 @@ shopt -s nullglob
 : "${GH_PR_TITLE:=""}"
 : "${GH_PR_HEAD_REF:=""}"
 
+# Actions interface
+: "${GITHUB_OUTPUT:=/dev/null}"
+
 if [[ ! "$STRATEGY" =~ merge|rebase|squash ]]; then
   echo "Invalid strategy: must be merge, rebase, or squash" >&2
   exit 64
@@ -88,12 +91,20 @@ EOM
   exit 0
 fi
 
+read -r defaultBranch < \
+  <(gh repo view "$GH_REPO" --json defaultBranchRef --jq '.defaultBranchRef.name')
+
+gh api \
+  "/repos/$GH_REPO/branches/$defaultBranch/protection" \
+  --jq '.required_status_checks.contexts[]' |
+  sort >"$tmp/required-statuses.txt"
+
 now_s=$(date +"%s")
 since_s=$((now_s - (QUARANTINE_DAYS * 24 * 60 * 60)))
 since=$(date -d "@$since_s" +"%Y-%m-%d")
 
 search="author:app/dependabot updated:<$since"
-fields='number,title,headRefName,author,updatedAt,reviewDecision'
+fields='number,title,headRefName,author,updatedAt,reviewDecision,statusCheckRollup'
 
 gh_pr list --search "$search" --limit 1000 --json "$fields" --jq '.[]' |
   while IFS=$'\n' read -r ln; do
@@ -102,6 +113,7 @@ gh_pr list --search "$search" --limit 1000 --json "$fields" --jq '.[]' |
   done
 
 found=0
+failed=()
 
 for json in "$tmp"/*.json; do
   number=$(jq --raw-output '.number' "$json")
@@ -125,6 +137,27 @@ for json in "$tmp"/*.json; do
     continue
   fi
 
+  jq --raw-output '.statusCheckRollup[] | select(.conclusion=="FAILURE") | .name' "$json" | sort >"$tmp/$number-failed-statuses.txt"
+  comm -12 "$tmp/required-statuses.txt" "$tmp/$number-failed-statuses.txt" >"$tmp/$number-required-failed-statuses.txt"
+
+  read -r failedStatuses < <(paste -sd ' ' "$tmp/$number-required-failed-statuses.txt")
+  read -r failedStatusesCount < <(wc -l <"$tmp/$number-required-failed-statuses.txt")
+
+  if ((failedStatusesCount == 1)); then
+    statusesHave='status has'
+  else
+    statusesHave='statuses have'
+  fi
+
+  if [[ -n "$failedStatuses" ]]; then
+    failed+=("$number")
+    printf '  \e[1;31m!!\e[0m %d required %s failed: \e[35m%s\e[0m\n' \
+      "$failedStatusesCount" \
+      "$statusesHave" \
+      "$failedStatuses"
+    continue
+  fi
+
   case "$reviewDecision" in
     CHANGES_REQUESTED)
       printf '  \e[1;37m=>\e[0m \e[33mSkip\e[0m (changes requested)\n'
@@ -144,6 +177,17 @@ for json in "$tmp"/*.json; do
       ;;
   esac
 done
+
+if ((${#failed})); then
+  echo "Warning: the following PRs cannot be auto-merged:"
+  echo "failed=true" >>"$GITHUB_OUTPUT"
+  echo "failed-urls<<EOM" >>"$GITHUB_OUTPUT"
+  for number in "${failed[@]}"; do
+    printf 'https://github.com/%s/pull/%s\n' "$GH_REPO" "$number"
+  done | tee -a "$GITHUB_OUTPUT"
+  echo "EOM" >>"$GITHUB_OUTPUT"
+
+fi
 
 if ((!found)); then
   echo "No Dependabot PRs found older than $since."
