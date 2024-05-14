@@ -2,12 +2,16 @@
 set -euo pipefail
 shopt -s nullglob
 
-if [[ ! "$STRATEGY" =~ merge|rebase|squash ]]; then
-  echo "Invalid strategy: must be merge, rebase, or squash" >&2
-  exit 64
-fi
+# Matches action defaults
+: "${EXCLUDE_TITLE_REGEX:=""}"
+: "${QUARANTINE_DAYS:=5}"
+: "${STRATEGY:=rebase}"
+: "${REMOVE_REVIEWERS:=true}"
 
-: "${DRY_RUN:=0}"
+# Except DRY_RUN=1 is better default if being run locally
+: "${DRY_RUN:=1}"
+
+# required: GH_REPO
 
 : "${GH_ACTOR:=""}"
 : "${GH_EVENT:=""}"
@@ -15,6 +19,11 @@ fi
 : "${GH_PR_NUMBER:=""}"
 : "${GH_PR_TITLE:=""}"
 : "${GH_PR_HEAD_REF:=""}"
+
+if [[ ! "$STRATEGY" =~ merge|rebase|squash ]]; then
+  echo "Invalid strategy: must be merge, rebase, or squash" >&2
+  exit 64
+fi
 
 is_dependabot() {
   [[ "$GH_ACTOR" == 'dependabot[bot]' ]] && [[ "$GH_EVENT" == 'pull_request' ]]
