@@ -9,6 +9,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - id: token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.FRECKLE_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.FRECKLE_AUTOMATION_APP_PRIVATE_KEY }}
+          repositories: megarepo
+
       # Run once with settings that are sure to find nothing (this repository
       # has nothing being kept up to date).
       - uses: ./
@@ -20,7 +27,7 @@ jobs:
       - uses: ./
         with:
           quarantine-days: -1
-          github-token: ${{ secrets.FRECKLE_AUTOMATION_GITHUB_TOKEN }}
+          github-token: ${{ steps.token.outputs.token }}
           github-repository: freckle/megarepo
           dry-run: 1
 
@@ -29,7 +36,7 @@ jobs:
         with:
           exclude-title-regex: 'in /qa$'
           quarantine-days: -1
-          github-token: ${{ secrets.FRECKLE_AUTOMATION_GITHUB_TOKEN }}
+          github-token: ${{ steps.token.outputs.token }}
           github-repository: freckle/megarepo
           dry-run: 1
 
