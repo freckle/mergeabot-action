@@ -110,10 +110,8 @@ jobs:
   would have `{quarantine-days}` days to notice and update your setting if
   necessary.
 
-- `quarantine-days`: how many days since the last update on a PR before it
-  qualifies for auto-merge. Default is 5.
-
-  Note that **any update** (a review, a comment, etc) will reset the clock.
+- `quarantine-days`: how many days a PR must be open before it qualifies for
+  auto-merge. Default is 5.
 
 - `strategy`: how to perform the [auto-]merge. Must be `merge`, `rebase`, or
   `squash`. Default is `rebase`.
@@ -128,19 +126,11 @@ None.
 
 ## Caveats
 
-This Action really only makes sense if Branch Protection is enabled. This is
-because it doesn't actually merge the PR, it enables auto-merge. That way,
-requiring that status checks are passing is handled correctly.
-
-If you use this Action in a project without Branch Protection, you will see
-
-```
-Message: ["Pull request Protected branch rules not configured for this branch"], Locations: [{Line:1 Column:72}]
-```
-
-PRs are welcome to make this use-case work, though it will require more
-complexity than simply an option not to use `--auto` with `gh merge`, since some
-manual handling of status checks would now be required.
+This Action really only makes sense if Branch Protection is enabled, Approvals
+are required, and Auto-merge is allowed. That's because it doesn't actually
+merge PRs, it approves and enables auto-merge. That way, we can leave the
+determination that all other PR requirements were satisfied to GitHub, where it
+belongs.
 
 ---
 
