@@ -96,7 +96,7 @@ jobs:
   mergeabot:
     runs-on: ubuntu-latest
     steps:
-      - uses: freckle/mergeabot-action@v1
+      - uses: freckle/mergeabot-action@v2
 ```
 
 ## Inputs
