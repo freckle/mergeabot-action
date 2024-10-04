@@ -84,7 +84,7 @@ since_s=$((now_s - (QUARANTINE_DAYS * 24 * 60 * 60)))
 since=$(date -d "@$since_s" +"%Y-%m-%d")
 
 search="author:app/dependabot updated:<$since"
-fields='number,title,headRefName,author,updatedAt,reviewDecision'
+fields='number,title,headRefName,author,createdAt,reviewDecision'
 
 gh_pr list --search "$search" --limit 1000 --json "$fields" --jq '.[]' |
   while IFS=$'\n' read -r ln; do
@@ -98,12 +98,12 @@ for json in "$tmp"/*.json; do
   number=$(jq --raw-output '.number' "$json")
   title=$(jq --raw-output '.title' "$json")
   branch=$(jq --raw-output '.headRefName' "$json")
-  updatedAt=$(jq --raw-output '.updatedAt' "$json")
+  createdAt=$(jq --raw-output '.createdAt' "$json")
   reviewDecision=$(jq --raw-output '.reviewDecision' "$json")
   found=1
 
   printf '%s (#\e[34m%s\e[0m)\n' "$title" "$number"
-  printf '  Last updated: \e[35m%s\e[0m\n' "$updatedAt"
+  printf '  Created at: \e[35m%s\e[0m\n' "$createdAt"
   printf '  Current review decision: \e[35m%s\e[0m\n' "$reviewDecision"
 
   if exclude_by_title "$title"; then
