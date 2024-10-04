@@ -129,8 +129,8 @@ for json in "$tmp"/*.json; do
     *)
       printf '  \e[1;37m=>\e[0m \e[32mApprove and enable auto-merge\e[0m\n'
       if ((!DRY_RUN)); then
-        gh_pr review --approve "$number"
         gh_pr merge --auto "$number" --"$STRATEGY"
+        gh_pr review --approve "$number"
       fi
       ;;
   esac
