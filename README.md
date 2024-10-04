@@ -52,25 +52,13 @@ on:
     - cron: "0 0 * * *"
 
   pull_request:
+    types: [opened]
 ```
 
 Mergeabot knows if it's running on a `pull_request` event in a Dependabot PR
 and, if so, leaves a comment on the PR indicating, roughly, "I got this."
 
 ![Mergeabot comment on opened event](./screenshots/opened-comment.png)
-
-When configured this way, Mergeabot will run when the PR is opened or updated,
-so it can let you know that the updates have reset the clock on the quarantine:
-
-![Mergeabot comment on synchronized event](./screenshots/synchronized-comment.png)
-
-If you don't prefer this, just limit it to only `opened` events:
-
-```yaml
-on:
-  pull_request:
-    types: [opened]
-```
 
 ## Permissions
 
@@ -98,6 +86,7 @@ on:
     - cron: "0 0 * * *"
 
   pull_request:
+    types: [opened]
 
 permissions:
   contents: write
