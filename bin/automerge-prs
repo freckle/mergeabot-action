@@ -58,7 +58,7 @@ if is_dependabot && ! exclude_by_title "$GH_PR_TITLE" && ! is_workflows_update "
         fi
       fi
 
-      cat >"$tmp/message" <<EOM
+      gh pr comment "$GH_PR_NUMBER" --body-file - <<EOM
 :heavy_check_mark: If all status checks pass, and no other reviews are submitted, [mergeabot][] will merge this PR $when_message.
 
 As long as that's OK, no other action is necessary.
@@ -66,16 +66,8 @@ As long as that's OK, no other action is necessary.
 [mergeabot]: https://github.com/freckle/mergeabot-action
 EOM
       ;;
-    *)
-      cat >"$tmp/message" <<EOM
-:clock1: PR was updated. [Mergeabot][] will now merge this PR $when_message.
-
-[mergeabot]: https://github.com/freckle/mergeabot-action
-EOM
-      ;;
   esac
 
-  gh pr comment "$GH_PR_NUMBER" --body-file "$tmp/message"
   exit 0
 fi
 
