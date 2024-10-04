@@ -117,7 +117,6 @@ jobs:
 
 - `strategy`: how to perform the [auto-]merge. Must be `merge`, `rebase`, or
   `squash`. Default is `rebase`.
-  
 - `remove-reviewers`: remove any requested reviewers (if run on PRs). Default
   is `true`.
 
