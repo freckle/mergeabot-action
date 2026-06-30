@@ -57,6 +57,34 @@ inputs:
     required: true
     default: 0
 
+  escalate:
+    description: |
+      On scheduled runs, request a team reviewer (and leave a triage comment)
+      on bot PRs that have failing statuses and no reviewer, so they don't sit
+      unmerged and unnoticed. Off by default. Requires a token that can request
+      team reviewers (e.g. a GitHub App token, not the default Actions token).
+    required: true
+    default: false
+
+  escalation-fallback-team:
+    description: |
+      Team slug to request when CODEOWNERS resolves to no team, or to more than
+      one (a PR spanning multiple teams). When empty, such PRs are skipped.
+    required: true
+    default: ""
+
+  escalation-team-prefix:
+    description: |
+      Only CODEOWNERS owners of the form @org/<prefix>* are treated as routable
+      teams (others, e.g. individuals, are ignored for routing).
+    required: true
+    default: "team-"
+
+  codeowners-path:
+    description: "Path to the CODEOWNERS file used for escalation routing"
+    required: true
+    default: ".github/CODEOWNERS"
+
 outputs: {}
 
 runs:
@@ -80,3 +108,18 @@ runs:
         GH_PR_ACTION: ${{ github.event.action }}
         GH_PR_NUMBER: ${{ github.event.number }}
         GH_PR_TITLE: ${{ github.event.pull_request.title }}
+
+    # Escalation is a scheduled sweep, not a per-PR-event reaction.
+    - name: Escalate failing bot PRs
+      if: ${{ inputs.escalate == 'true' && github.event_name != 'pull_request' }}
+      shell: bash
+      run: ${{ github.action_path }}/bin/escalate-failing-prs
+      env:
+        BOT_AUTHORS: ${{ inputs.bot-authors }}
+        ESCALATION_FALLBACK_TEAM: ${{ inputs.escalation-fallback-team }}
+        ESCALATION_TEAM_PREFIX: ${{ inputs.escalation-team-prefix }}
+        CODEOWNERS_PATH: ${{ inputs.codeowners-path }}
+        DRY_RUN: ${{ inputs.dry-run }}
+
+        GH_TOKEN: ${{ inputs.github-token }}
+        GH_REPO: ${{ inputs.github-repository }}

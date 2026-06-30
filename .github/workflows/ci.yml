@@ -61,3 +61,14 @@ jobs:
           bot-authors: |
             dependabot[bot]
             renovate[bot]
+
+      # Exercise escalation directly: the action gates it to scheduled runs, but
+      # CI runs on pull_request, so invoke the script with dry-run here.
+      - name: Escalation dry-run
+        run: ./bin/escalate-failing-prs
+        env:
+          DRY_RUN: 1
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          GH_REPO: freckle/megarepo
+          BOT_AUTHORS: renovate[bot]
+          ESCALATION_FALLBACK_TEAM: team-platform

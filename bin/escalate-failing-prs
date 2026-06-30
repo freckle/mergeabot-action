@@ -1,0 +1,213 @@
+#!/usr/bin/env bash
+set -euo pipefail
+shopt -s nullglob
+
+# Restore the "a requested reviewer means this PR needs human attention"
+# invariant: find open bot PRs that have failing statuses (so they can never
+# auto-merge) and no reviewer, route them to the owning team via CODEOWNERS, and
+# leave a triage comment. Idempotent via a hidden HTML marker.
+
+: "${DRY_RUN:=0}"
+: "${CODEOWNERS_PATH:=.github/CODEOWNERS}"
+: "${ESCALATION_TEAM_PREFIX:=team-}"
+: "${ESCALATION_FALLBACK_TEAM:=}"
+: "${GH_REPO:?GH_REPO is required}"
+
+# BOT_AUTHORS is the configured set of dependency-bot logins to act on, one per
+# line (mirrors @actions/core's getMultilineInput: trim each line, drop empties).
+: "${BOT_AUTHORS:=dependabot[bot]}"
+author_logins=()
+while IFS= read -r line; do
+  line="${line#"${line%%[![:space:]]*}"}" # ltrim
+  line="${line%"${line##*[![:space:]]}"}" # rtrim
+  [[ -n "$line" ]] && author_logins+=("$line")
+done <<<"$BOT_AUTHORS"
+
+gh_pr() {
+  gh pr --repo "$GH_REPO" "$@"
+}
+
+MARKER='<!-- mergeabot-escalation -->'
+
+# statusCheckRollup conclusions/states that mean "this PR cannot merge as-is".
+# SUCCESS/SKIPPED/NEUTRAL/PENDING are intentionally excluded.
+FAILING='"FAILURE","ERROR","TIMED_OUT","CANCELLED","STARTUP_FAILURE","ACTION_REQUIRED"'
+
+# Convert a CODEOWNERS glob to an ERE using gitignore semantics. Patterns
+# starting with / are anchored to the repo root; others may match anywhere. A
+# trailing / is dropped, then re-added by the (/|$) suffix.
+codeowners_to_regex() {
+  local pattern="$1" anchored=0 p="" c i
+  if [[ "$pattern" == /* ]]; then
+    anchored=1
+    pattern="${pattern#/}"
+  fi
+  pattern="${pattern%/}"
+  # Escape ERE metacharacters char-by-char (portable; * is left for the globbing
+  # step below). Done in bash to avoid sed's bracket-expression portability quirks.
+  for ((i = 0; i < ${#pattern}; i++)); do
+    c="${pattern:i:1}"
+    case "$c" in
+      '.' | '+' | '^' | '$' | '(' | ')' | '{' | '}' | '|' | '[' | ']' | '\') p+="\\$c" ;;
+      *) p+="$c" ;;
+    esac
+  done
+  p=${p//\*\*/$'\x01'} # ** matches across /
+  p=${p//\*/[^/]*}     # * does not
+  p=${p//$'\x01'/.*}
+  if ((anchored)); then
+    printf '^%s(/|$)' "$p"
+  else
+    printf '(^|/)%s(/|$)' "$p"
+  fi
+}
+
+# Parse CODEOWNERS into parallel RULE_REGEX/RULE_TEAM arrays in file order.
+# RULE_TEAM holds the first team-prefixed owner for a rule, or "" when the rule
+# has none (e.g. an unowned path), so "last match wins" can override a catch-all.
+RULE_REGEX=()
+RULE_TEAM=()
+parse_codeowners() {
+  local content="$1" line trimmed pat team owner i
+  local team_owner_re="^@[^/]+/${ESCALATION_TEAM_PREFIX}"
+  while IFS= read -r line; do
+    trimmed="${line%$'\r'}"
+    trimmed="${trimmed#"${trimmed%%[![:space:]]*}"}"
+    [[ -z "$trimmed" || "$trimmed" == '#'* ]] && continue
+    # shellcheck disable=SC2206
+    local parts=($trimmed)
+    pat="${parts[0]}"
+    team=""
+    for ((i = 1; i < ${#parts[@]}; i++)); do
+      owner="${parts[i]}"
+      if [[ "$owner" =~ $team_owner_re ]]; then
+        team="${owner#@*/}" # strip @org/
+        break
+      fi
+    done
+    RULE_REGEX+=("$(codeowners_to_regex "$pat")")
+    RULE_TEAM+=("$team")
+  done <<<"$content"
+}
+
+# Team slug for a single path, or "" if the last matching rule has no team.
+team_for_path() {
+  local path="$1" result="" i
+  for ((i = 0; i < ${#RULE_REGEX[@]}; i++)); do
+    if [[ "$path" =~ ${RULE_REGEX[i]} ]]; then
+      result="${RULE_TEAM[i]}"
+    fi
+  done
+  printf '%s' "$result"
+}
+
+# Team to request for a PR given its changed paths: the single owning team if
+# they all agree, otherwise the fallback (also used when nothing matches).
+get_review_team() {
+  local f t teams="" uniq count
+  for f in "$@"; do
+    t="$(team_for_path "$f")"
+    [[ -n "$t" ]] && teams+="$t"$'\n'
+  done
+  uniq=$(printf '%s' "$teams" | grep -v '^$' | sort -u || true)
+  count=$(printf '%s\n' "$uniq" | grep -c . || true)
+  if [[ "$count" -eq 1 ]]; then
+    printf '%s' "$uniq"
+  else
+    printf '%s' "$ESCALATION_FALLBACK_TEAM"
+  fi
+}
+
+codeowners=""
+if codeowners=$(gh api "repos/$GH_REPO/contents/$CODEOWNERS_PATH" \
+  -H "Accept: application/vnd.github.raw" 2>/dev/null); then
+  parse_codeowners "$codeowners"
+  echo "Loaded ${#RULE_REGEX[@]} CODEOWNERS rule(s) from $CODEOWNERS_PATH"
+else
+  echo "Could not read $CODEOWNERS_PATH from $GH_REPO; using fallback team only"
+fi
+
+# All open bot PRs, OR-ing each configured author (no updated:< filter — a PR can
+# fail its checks at any age). No trailing AND term, so OR precedence is moot.
+search=""
+for login in "${author_logins[@]}"; do
+  case "$login" in
+    *'[bot]') author="app/${login%'[bot]'}" ;;
+    *) author="$login" ;;
+  esac
+  search+="${search:+ OR }author:$author"
+done
+
+prs_json=$(gh_pr list \
+  --state open \
+  --search "$search" \
+  --limit 1000 \
+  --json number,reviewRequests,statusCheckRollup,files)
+
+fail=0
+found=0
+
+while IFS=$'\t' read -r number files_str; do
+  [[ -z "$number" ]] && continue
+  found=1
+  # shellcheck disable=SC2206
+  files=($files_str)
+  team="$(get_review_team "${files[@]}")"
+
+  printf 'Failing bot PR (#\e[34m%s\e[0m)\n' "$number"
+  printf '  Routed to team: \e[35m%s\e[0m\n' "${team:-<none>}"
+
+  if [[ -z "$team" ]]; then
+    printf '  \e[1;37m=>\e[0m \e[33mSkip\e[0m (no team resolved and no fallback configured)\n'
+    continue
+  fi
+
+  if gh api --paginate "repos/$GH_REPO/issues/$number/comments" --jq '.[].body' 2>/dev/null |
+    grep -qF "$MARKER"; then
+    printf '  \e[1;37m=>\e[0m \e[33mSkip\e[0m (already escalated)\n'
+    continue
+  fi
+
+  if ((DRY_RUN)); then
+    printf '  \e[1;37m=>\e[0m \e[32m[dry-run] Would request %s and post escalation comment\e[0m\n' "$team"
+    continue
+  fi
+
+  printf '  \e[1;37m=>\e[0m \e[32mRequesting review from %s and posting comment\e[0m\n' "$team"
+  if ! echo "{\"team_reviewers\":[\"$team\"]}" |
+    gh api -X POST --input - "repos/$GH_REPO/pulls/$number/requested_reviewers" >/dev/null; then
+    echo "  Failed to request reviewer $team on #$number" >&2
+    fail=1
+    continue
+  fi
+
+  gh_pr comment "$number" --body-file - <<EOM
+$MARKER
+This bot PR has failing statuses and cannot auto-merge. It has been re-assigned for human intervention.
+
+If you are the new reviewer, you should:
+
+- [ ] Check for failing statuses and address any (click the status link on this PR for details)
+- [ ] Approve the PR
+EOM
+done < <(
+  printf '%s' "$prs_json" | jq -r "
+    .[]
+    | select((.reviewRequests | length) == 0)
+    | select(
+        [.statusCheckRollup[]? | (.conclusion // .state // \"\")]
+        | map(IN($FAILING))
+        | any
+      )
+    | \"\(.number)\t\([.files[]?.path] | join(\" \"))\"
+  "
+)
+
+if ((!found)); then
+  echo "No failing bot PRs without a reviewer found."
+fi
+
+if ((fail)); then
+  echo "Failed to escalate some PRs" >&2
+  exit 1
+fi

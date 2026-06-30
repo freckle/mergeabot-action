@@ -128,7 +128,49 @@ jobs:
         renovate[bot]
   ```
 
+- `escalate`: on scheduled runs, request a team reviewer on failing bot PRs that
+  have no reviewer (see [Escalation](#escalation)). Default is `false`.
+- `escalation-fallback-team`: team slug to request when CODEOWNERS resolves to
+  no team, or to more than one. Empty (the default) skips such PRs.
+- `escalation-team-prefix`: only CODEOWNERS owners of the form `@org/<prefix>*`
+  are treated as routable teams. Default is `team-`.
+- `codeowners-path`: CODEOWNERS file used for escalation routing. Default is
+  `.github/CODEOWNERS`.
+
 See [`action.yml`](./action.yml) for other, seldom useful, inputs.
+
+## Escalation
+
+Mergeabot removes reviewers from healthy bot PRs, so a requested reviewer should
+mean "this PR needs human attention." `escalate: true` restores the other half
+of that convention: on scheduled runs it finds bot PRs that have **failing
+statuses** (so they can never auto-merge) and **no reviewer**, requests the
+owning team as reviewer, and leaves a one-time triage comment.
+
+The owning team is resolved from `CODEOWNERS` against the PR's changed files
+(last match wins, gitignore-style globbing). Only `@org/<prefix>*` owners count
+as teams; a PR spanning multiple teams (or matching none) routes to
+`escalation-fallback-team`. Comments are idempotent (re-runs are no-ops).
+
+```yaml
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  mergeabot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: freckle/mergeabot-action@v2
+        with:
+          bot-authors: |
+            dependabot[bot]
+            renovate[bot]
+          escalate: true
+          escalation-fallback-team: team-platform
+          # github.token usually can't request team reviewers; pass an App token
+          github-token: ${{ steps.app-token.outputs.token }}
+```
 
 ## Outputs
 
