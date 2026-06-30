@@ -14,28 +14,49 @@ fi
 : "${GH_PR_ACTION:=""}"
 : "${GH_PR_NUMBER:=""}"
 : "${GH_PR_TITLE:=""}"
-: "${GH_PR_HEAD_REF:=""}"
 
-is_dependabot() {
-  [[ "$GH_ACTOR" == 'dependabot[bot]' ]] && [[ "$GH_EVENT" == 'pull_request' ]]
+# PR_AUTHORS is the configured set of dependency-bot logins to act on, one per
+# line (mirrors @actions/core's getMultilineInput: trim each line, drop empties).
+: "${PR_AUTHORS:=dependabot[bot]}"
+author_logins=()
+while IFS= read -r line; do
+  line="${line#"${line%%[![:space:]]*}"}" # ltrim
+  line="${line%"${line##*[![:space:]]}"}" # rtrim
+  [[ -n "$line" ]] && author_logins+=("$line")
+done <<<"$PR_AUTHORS"
+
+is_bot_pr_event() {
+  [[ "$GH_EVENT" == 'pull_request' ]] || return 1
+  local login
+  for login in "${author_logins[@]}"; do
+    [[ "$GH_ACTOR" == "$login" ]] && return 0
+  done
+  return 1
 }
 
 exclude_by_title() {
   [[ -n "$EXCLUDE_TITLE_REGEX" ]] && [[ "$1" =~ $EXCLUDE_TITLE_REGEX ]]
 }
 
-is_workflows_update() {
-  [[ "$1" =~ ^dependabot/github_actions/.* ]]
-}
-
 gh_pr() {
   gh pr --repo "$GH_REPO" "$@"
+}
+
+# True if any of the newline-separated file paths on stdin is a GitHub Actions
+# workflow file. Our token usually lacks the "workflows" permission to merge
+# such PRs, so we leave them for a human.
+touches_workflows() {
+  grep -q '^\.github/workflows/'
+}
+
+pr_touches_workflows() {
+  gh api --paginate "repos/$GH_REPO/pulls/$1/files" --jq '.[].filename' | touches_workflows
 }
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-if is_dependabot && ! exclude_by_title "$GH_PR_TITLE" && ! is_workflows_update "$GH_PR_HEAD_REF"; then
+if is_bot_pr_event && ! exclude_by_title "$GH_PR_TITLE" && ! pr_touches_workflows "$GH_PR_NUMBER"; then
   if ((QUARANTINE_DAYS <= 0)); then
     when_message="the next time it runs"
   else
@@ -75,8 +96,20 @@ now_s=$(date +"%s")
 since_s=$((now_s - (QUARANTINE_DAYS * 24 * 60 * 60)))
 since=$(date -d "@$since_s" +"%Y-%m-%d")
 
-search="author:app/dependabot updated:<$since"
-fields='number,title,headRefName,author,createdAt,reviewDecision'
+fields='number,title,author,createdAt,reviewDecision,files'
+
+# Build one search OR-ing each author, repeating the updated:< filter in every
+# branch: GitHub parses "A OR B C" as "A OR (B AND C)" and has no grouping
+# parentheses, so the quarantine window must be attached to each author. The
+# search author is "app/<slug>" for a "<slug>[bot]" App, else the bare login.
+search=""
+for login in "${author_logins[@]}"; do
+  case "$login" in
+    *'[bot]') author="app/${login%'[bot]'}" ;;
+    *) author="$login" ;;
+  esac
+  search+="${search:+ OR }author:$author updated:<$since"
+done
 
 gh_pr list --search "$search" --limit 1000 --json "$fields" --jq '.[]' |
   while IFS=$'\n' read -r ln; do
@@ -89,7 +122,6 @@ found=0
 for json in "$tmp"/*.json; do
   number=$(jq --raw-output '.number' "$json")
   title=$(jq --raw-output '.title' "$json")
-  branch=$(jq --raw-output '.headRefName' "$json")
   createdAt=$(jq --raw-output '.createdAt' "$json")
   reviewDecision=$(jq --raw-output '.reviewDecision' "$json")
   found=1
@@ -103,8 +135,8 @@ for json in "$tmp"/*.json; do
     continue
   fi
 
-  if is_workflows_update "$branch"; then
-    printf '  \e[1;37m=>\e[0m \e[33mSkip\e[0m (PR updates worflows)\n'
+  if jq -r '.files[]?.path' "$json" | touches_workflows; then
+    printf '  \e[1;37m=>\e[0m \e[33mSkip\e[0m (PR updates workflows)\n'
     continue
   fi
 
@@ -129,5 +161,5 @@ for json in "$tmp"/*.json; do
 done
 
 if ((!found)); then
-  echo "No Dependabot PRs found older than $since."
+  echo "No bot PRs found older than $since."
 fi

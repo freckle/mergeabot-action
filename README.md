@@ -117,6 +117,16 @@ jobs:
   `squash`. Default is `rebase`.
 - `remove-reviewers`: remove any requested reviewers (if run on PRs). Default
   is `true`.
+- `pr-authors`: which dependency-bot PR authors to act on, one bot login per
+  line. Default is `dependabot[bot]`. To also handle Renovate:
+
+  ```yaml
+  - uses: freckle/mergeabot-action@v2
+    with:
+      pr-authors: |
+        dependabot[bot]
+        renovate[bot]
+  ```
 
 See [`action.yml`](./action.yml) for other, seldom useful, inputs.
 

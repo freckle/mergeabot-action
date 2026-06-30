@@ -20,9 +20,22 @@ inputs:
     default: rebase
 
   remove-reviewers:
-    description: Remove any reviewers from Dependabot PRs when they open?
+    description: Remove any reviewers from bot PRs when they open?
     required: true
     default: true
+
+  pr-authors:
+    description: |
+      Which dependency-bot PR authors to act on, one bot login per line.
+      Defaults to Dependabot only; set to
+
+        pr-authors: |
+          dependabot[bot]
+          renovate[bot]
+
+      to also handle Renovate.
+    required: true
+    default: "dependabot[bot]"
 
   github-actor:
     description: "Override GitHub actor. This is mostly useful in testing."
@@ -57,6 +70,7 @@ runs:
         QUARANTINE_DAYS: ${{ inputs.quarantine-days }}
         STRATEGY: ${{ inputs.strategy }}
         REMOVE_REVIEWERS: ${{ inputs.remove-reviewers }}
+        PR_AUTHORS: ${{ inputs.pr-authors }}
         DRY_RUN: ${{ inputs.dry-run }}
 
         GH_TOKEN: ${{ inputs.github-token }}
@@ -66,4 +80,3 @@ runs:
         GH_PR_ACTION: ${{ github.event.action }}
         GH_PR_NUMBER: ${{ github.event.number }}
         GH_PR_TITLE: ${{ github.event.pull_request.title }}
-        GH_PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
