@@ -27,11 +27,7 @@ done <<<"$PR_AUTHORS"
 
 is_bot_pr_event() {
   [[ "$GH_EVENT" == 'pull_request' ]] || return 1
-  local login
-  for login in "${author_logins[@]}"; do
-    [[ "$GH_ACTOR" == "$login" ]] && return 0
-  done
-  return 1
+  grep -Fq " $GH_ACTOR " <<<" ${author_logins[*]} "
 }
 
 exclude_by_title() {
@@ -42,15 +38,14 @@ gh_pr() {
   gh pr --repo "$GH_REPO" "$@"
 }
 
-# True if any of the newline-separated file paths on stdin is a GitHub Actions
-# workflow file. Our token usually lacks the "workflows" permission to merge
-# such PRs, so we leave them for a human.
-touches_workflows() {
+any_workflow_path() {
   grep -q '^\.github/workflows/'
 }
 
+# True if the PR touches a GitHub Actions workflow file. Our token usually lacks
+# the "workflows" permission to merge such PRs, so we leave them for a human.
 pr_touches_workflows() {
-  gh api --paginate "repos/$GH_REPO/pulls/$1/files" --jq '.[].filename' | touches_workflows
+  gh api --paginate "repos/$GH_REPO/pulls/$1/files" --jq '.[].filename' | any_workflow_path
 }
 
 tmp=$(mktemp -d)
@@ -135,7 +130,7 @@ for json in "$tmp"/*.json; do
     continue
   fi
 
-  if jq -r '.files[]?.path' "$json" | touches_workflows; then
+  if jq -r '.files[]?.path' "$json" | any_workflow_path; then
     printf '  \e[1;37m=>\e[0m \e[33mSkip\e[0m (PR updates workflows)\n'
     continue
   fi
