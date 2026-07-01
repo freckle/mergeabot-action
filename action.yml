@@ -24,12 +24,12 @@ inputs:
     required: true
     default: true
 
-  pr-authors:
+  bot-authors:
     description: |
       Which dependency-bot PR authors to act on, one bot login per line.
       Defaults to Dependabot only; set to
 
-        pr-authors: |
+        bot-authors: |
           dependabot[bot]
           renovate[bot]
 
@@ -70,7 +70,7 @@ runs:
         QUARANTINE_DAYS: ${{ inputs.quarantine-days }}
         STRATEGY: ${{ inputs.strategy }}
         REMOVE_REVIEWERS: ${{ inputs.remove-reviewers }}
-        PR_AUTHORS: ${{ inputs.pr-authors }}
+        BOT_AUTHORS: ${{ inputs.bot-authors }}
         DRY_RUN: ${{ inputs.dry-run }}
 
         GH_TOKEN: ${{ inputs.github-token }}

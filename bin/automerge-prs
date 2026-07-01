@@ -15,15 +15,15 @@ fi
 : "${GH_PR_NUMBER:=""}"
 : "${GH_PR_TITLE:=""}"
 
-# PR_AUTHORS is the configured set of dependency-bot logins to act on, one per
+# BOT_AUTHORS is the configured set of dependency-bot logins to act on, one per
 # line (mirrors @actions/core's getMultilineInput: trim each line, drop empties).
-: "${PR_AUTHORS:=dependabot[bot]}"
+: "${BOT_AUTHORS:=dependabot[bot]}"
 author_logins=()
 while IFS= read -r line; do
   line="${line#"${line%%[![:space:]]*}"}" # ltrim
   line="${line%"${line##*[![:space:]]}"}" # rtrim
   [[ -n "$line" ]] && author_logins+=("$line")
-done <<<"$PR_AUTHORS"
+done <<<"$BOT_AUTHORS"
 
 is_bot_pr_event() {
   [[ "$GH_EVENT" == 'pull_request' ]] || return 1

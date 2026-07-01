@@ -53,11 +53,11 @@ jobs:
           remove-reviewers: false
           github-actor: 'dependabot[bot]'
 
-      # Run as if we were a Renovate-PR, to exercise the multiline pr-authors input
+      # Run as if we were a Renovate-PR, to exercise the multiline bot-authors input
       - uses: ./
         with:
           remove-reviewers: false
           github-actor: 'renovate[bot]'
-          pr-authors: |
+          bot-authors: |
             dependabot[bot]
             renovate[bot]
