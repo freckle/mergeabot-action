@@ -118,14 +118,14 @@ jobs:
 - `remove-reviewers`: remove any requested reviewers (if run on PRs). Default
   is `true`.
 - `bot-authors`: which dependency-bot PR authors to act on, one bot login per
-  line. Default is `dependabot[bot]`. To also handle Renovate:
+  line. Default is `dependabot[bot]` and `renovate[bot]`. To restrict to
+  Dependabot only:
 
   ```yaml
   - uses: freckle/mergeabot-action@v2
     with:
       bot-authors: |
         dependabot[bot]
-        renovate[bot]
   ```
 
 See [`action.yml`](./action.yml) for other, seldom useful, inputs.
