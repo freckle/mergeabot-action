@@ -26,16 +26,17 @@ inputs:
 
   bot-authors:
     description: |
-      Which dependency-bot PR authors to act on, one bot login per line.
-      Defaults to Dependabot only; set to
+      Which PR authors to act on, one login per line. Not limited to bots --
+      any author login works. Defaults to Dependabot and Renovate; set to
 
         bot-authors: |
           dependabot[bot]
-          renovate[bot]
 
-      to also handle Renovate.
+      to restrict to Dependabot only.
     required: true
-    default: "dependabot[bot]"
+    default: |
+      dependabot[bot]
+      renovate[bot]
 
   github-actor:
     description: "Override GitHub actor. This is mostly useful in testing."
