@@ -15,7 +15,8 @@ shopt -s nullglob
 
 # BOT_AUTHORS is the configured set of dependency-bot logins to act on, one per
 # line (mirrors @actions/core's getMultilineInput: trim each line, drop empties).
-: "${BOT_AUTHORS:=dependabot[bot]}"
+# The default lives in action.yml, not here, so it only needs to be set once.
+: "${BOT_AUTHORS:?must be set, see the action.yml default}"
 author_logins=()
 while IFS= read -r line; do
   line="${line#"${line%%[![:space:]]*}"}" # ltrim
