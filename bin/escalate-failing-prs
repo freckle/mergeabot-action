@@ -75,8 +75,8 @@ parse_codeowners() {
     trimmed="${line%$'\r'}"
     trimmed="${trimmed#"${trimmed%%[![:space:]]*}"}"
     [[ -z "$trimmed" || "$trimmed" == '#'* ]] && continue
-    # shellcheck disable=SC2206
-    local parts=($trimmed)
+    local parts
+    read -ra parts <<<"$trimmed"
     pat="${parts[0]}"
     team=""
     for ((i = 1; i < ${#parts[@]}; i++)); do
