@@ -1,0 +1,21 @@
+name: ShellCheck
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  # write access needed to post a comment
+  pull-requests: write
+
+jobs:
+  shellcheck:
+    runs-on: cicd-prod-03-ubuntu-prod
+    steps:
+      - uses: actions/checkout@v7
+      - uses: reviewdog/action-shellcheck@v1
+        with:
+          level: warning
+          reporter: github-pr-review
+          fail_level: 'error'
+          check_all_files_with_shebangs: true
