@@ -153,15 +153,17 @@ describe("run / bot PR events", () => {
     expect(body).toContain("after 5 day(s), on 2024-06-20");
   });
 
-  it("does not mutate anything in dry-run mode, but still exits early", async () => {
+  it("still removes reviewers and comments in dry-run mode -- dry-run only gates the scan's merge/approve", async () => {
     const client = fakeClient({
       listRequestedReviewers: async () => ({ users: ["alice"], teams: [] }),
     });
 
     await run(config({ dryRun: true }), openedContext(), client, NOW);
 
-    expect(client.calls.removeRequestedReviewers).toBeUndefined();
-    expect(client.calls.createComment).toBeUndefined();
+    expect(client.calls.removeRequestedReviewers).toEqual([
+      [42, ["alice"], []],
+    ]);
+    expect(client.calls.createComment).toHaveLength(1);
     expect(client.calls.searchQuarantinedPrs).toBeUndefined();
   });
 

@@ -52,13 +52,14 @@ async function handleBotPrEvent(
   }
 
   if (context.prAction === "opened") {
+    // dry-run only gates the scan loop's merge/approve calls below, not these
+    // -- removing reviewers and commenting were never gated in the original
+    // bash either.
     if (config.removeReviewers) {
       const { users, teams } = await client.listRequestedReviewers(number);
       if (users.length > 0 || teams.length > 0) {
         core.info("Removing requested reviewers");
-        if (!config.dryRun) {
-          await client.removeRequestedReviewers(number, users, teams);
-        }
+        await client.removeRequestedReviewers(number, users, teams);
       }
     }
 
@@ -69,9 +70,7 @@ As long as that's OK, no other action is necessary.
 
 [mergeabot]: https://github.com/freckle/mergeabot-action`;
 
-    if (!config.dryRun) {
-      await client.createComment(number, body);
-    }
+    await client.createComment(number, body);
   }
 
   return true;
