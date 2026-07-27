@@ -61,23 +61,5 @@ inputs:
 outputs: {}
 
 runs:
-  using: composite
-  steps:
-    - name: Auto-merge Dependabot PRs
-      shell: bash
-      run: ${{ github.action_path }}/bin/automerge-prs
-      env:
-        EXCLUDE_TITLE_REGEX: ${{ inputs.exclude-title-regex }}
-        QUARANTINE_DAYS: ${{ inputs.quarantine-days }}
-        STRATEGY: ${{ inputs.strategy }}
-        REMOVE_REVIEWERS: ${{ inputs.remove-reviewers }}
-        BOT_AUTHORS: ${{ inputs.bot-authors }}
-        DRY_RUN: ${{ inputs.dry-run }}
-
-        GH_TOKEN: ${{ inputs.github-token }}
-        GH_ACTOR: ${{ inputs.github-actor }}
-        GH_REPO: ${{ inputs.github-repository }}
-        GH_EVENT: ${{ github.event_name }}
-        GH_PR_ACTION: ${{ github.event.action }}
-        GH_PR_NUMBER: ${{ github.event.number }}
-        GH_PR_TITLE: ${{ github.event.pull_request.title }}
+  using: node24
+  main: dist/index.js
