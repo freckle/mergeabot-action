@@ -78,7 +78,6 @@ function pr(overrides: Partial<QuarantinedPr> = {}): QuarantinedPr {
     title: "Bump foo from 1.0.0 to 1.0.1",
     createdAt: "2024-01-01T00:00:00Z",
     reviewDecision: null,
-    files: ["package.json"],
     ...overrides,
   };
 }
@@ -249,9 +248,8 @@ describe("run / scheduled scan", () => {
 
   it("skips PRs that touch workflow files", async () => {
     const client = fakeClient({
-      searchQuarantinedPrs: async () => [
-        pr({ files: [".github/workflows/ci.yml"] }),
-      ],
+      searchQuarantinedPrs: async () => [pr()],
+      listPrFiles: async () => [".github/workflows/ci.yml"],
     });
 
     await run(config(), scheduleContext, client, NOW);

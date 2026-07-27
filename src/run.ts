@@ -101,7 +101,7 @@ async function scanForQuarantinedPrs(
       continue;
     }
 
-    if (touchesWorkflows(pr.files)) {
+    if (touchesWorkflows(await client.listPrFiles(pr.number))) {
       core.info("  => Skip (PR updates workflows)");
       continue;
     }

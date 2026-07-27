@@ -3,6 +3,8 @@ import * as github from "@actions/github";
 import type { Strategy } from "./config.js";
 import type { GithubClient, QuarantinedPr } from "./client.js";
 
+type OctokitOptions = Parameters<typeof github.getOctokit>[1];
+
 const SEARCH_QUERY = `
   query ($searchQuery: String!, $after: String) {
     search(query: $searchQuery, type: ISSUE, first: 100, after: $after) {
@@ -13,11 +15,6 @@ const SEARCH_QUERY = `
           title
           createdAt
           reviewDecision
-          files(first: 100) {
-            nodes {
-              path
-            }
-          }
         }
       }
       pageInfo {
@@ -54,7 +51,6 @@ interface SearchResponse {
       title: string;
       createdAt: string;
       reviewDecision: string | null;
-      files: { nodes: { path: string }[] };
     }[];
     pageInfo: { hasNextPage: boolean; endCursor: string | null };
   };
@@ -64,8 +60,9 @@ export function createGithubClient(
   token: string,
   owner: string,
   repo: string,
+  octokitOptions?: OctokitOptions,
 ): GithubClient {
-  const octokit = github.getOctokit(token);
+  const octokit = github.getOctokit(token, octokitOptions);
 
   return {
     async listPrFiles(prNumber) {
@@ -125,7 +122,6 @@ export function createGithubClient(
             title: node.title,
             createdAt: node.createdAt,
             reviewDecision: node.reviewDecision,
-            files: node.files.nodes.map((file) => file.path),
           });
         }
 

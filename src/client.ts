@@ -6,7 +6,6 @@ export interface QuarantinedPr {
   title: string;
   createdAt: string;
   reviewDecision: string | null;
-  files: string[];
 }
 
 export interface RequestedReviewers {
