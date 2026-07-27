@@ -1,0 +1,36 @@
+{
+  "name": "mergeabot-action",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Auto-merge Dependabot PRs, only after quarantine days",
+  "main": "lib/main.js",
+  "packageManager": "pnpm@11.5.2",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc && ncc build lib/main.js --minify --out dist",
+    "format": "prettier --write \"**/*.ts\"",
+    "format-check": "prettier --check \"**/*.ts\"",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/freckle/mergeabot-action.git"
+  },
+  "author": "Freckle",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^3.0.1",
+    "@actions/github": "^9.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@vercel/ncc": "^0.44.1",
+    "prettier": "^3.9.6",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
