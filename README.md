@@ -142,6 +142,18 @@ merge PRs, it approves and enables auto-merge. That way, we can leave the
 determination that all other PR requirements were satisfied to GitHub, where it
 belongs.
 
+## Development
+
+This is a TypeScript Action. After changing anything in `src/`:
+
+```console
+pnpm install
+pnpm test
+pnpm run build   # rebuilds dist/index.js, which must be committed
+```
+
+CI fails if `dist/index.js` doesn't match what `src/` produces.
+
 ---
 
 [LICENSE](./LICENSE)
