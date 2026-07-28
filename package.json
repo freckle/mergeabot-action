@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Auto-merge Dependabot PRs, only after quarantine days",
+  "description": "Auto-merge PRs based on config, only after quarantine days",
   "main": "lib/main.js",
   "packageManager": "pnpm@11.5.2",
   "engines": {
