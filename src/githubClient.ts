@@ -5,9 +5,12 @@ import type { GithubClient, QuarantinedPr } from "./client.js";
 
 type OctokitOptions = Parameters<typeof github.getOctokit>[1];
 
+// type: ISSUE (the default/legacy search backend) silently ignores explicit
+// "OR" in the query string -- it just returns zero results. ISSUE_ADVANCED is
+// the search type that actually supports it.
 const SEARCH_QUERY = `
   query ($searchQuery: String!, $after: String) {
-    search(query: $searchQuery, type: ISSUE, first: 100, after: $after) {
+    search(query: $searchQuery, type: ISSUE_ADVANCED, first: 100, after: $after) {
       nodes {
         ... on PullRequest {
           id
