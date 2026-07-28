@@ -13,6 +13,7 @@
     "build": "tsc && ncc build lib/main.js --minify --out dist",
     "format": "prettier --write \"**/*.ts\"",
     "format-check": "prettier --check \"**/*.ts\"",
+    "knip": "knip",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@types/node": "^24.13.3",
     "@vercel/ncc": "^0.44.1",
+    "knip": "^6.29.0",
     "prettier": "^3.9.6",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
