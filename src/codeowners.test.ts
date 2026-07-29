@@ -56,10 +56,23 @@ describe("resolveTeamForPaths / globbing", () => {
     ["docs/", ["docs/guide/intro.md"], "team-a"],
     ["docs/", ["src/docs.md"], "fallback"],
     ["src/**/main.ts", ["src/a/b/main.ts"], "team-a"],
+    ["src/**/main.ts", ["src/main.ts"], "team-a"],
+    ["**/vendor", ["vendor"], "team-a"],
+    ["**/vendor", ["a/b/vendor"], "team-a"],
+    ["docs/**", ["docs"], "team-a"],
+    ["docs/**", ["docs/guide/intro.md"], "team-a"],
     ["src/*.ts", ["src/main.ts"], "team-a"],
     ["src/*.ts", ["src/a/main.ts"], "fallback"],
   ])("pattern=%s paths=%s -> %s", (pattern, paths, expected) => {
     expect(resolve(`${pattern} @freckle/team-a`, paths)).toBe(expected);
+  });
+
+  it("treats ? as a literal character, not a quantifier or wildcard", () => {
+    expect(resolve("file?.txt @freckle/team-a", ["file?.txt"])).toBe("team-a");
+    expect(resolve("file?.txt @freckle/team-a", ["file.txt"])).toBe("fallback");
+    expect(resolve("file?.txt @freckle/team-a", ["fileA.txt"])).toBe(
+      "fallback",
+    );
   });
 });
 

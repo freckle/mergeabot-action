@@ -27,7 +27,7 @@ async function loadCodeowners(
   const content = await client.getFileContent(inputs.codeownersPath);
 
   if (content === null) {
-    core.info(
+    core.warning(
       `Could not read ${inputs.codeownersPath}; using fallback team only`,
     );
     return [];
