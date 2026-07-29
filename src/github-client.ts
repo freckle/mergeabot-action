@@ -79,33 +79,28 @@ const MERGE_METHODS: Record<Strategy, "MERGE" | "REBASE" | "SQUASH"> = {
 
 const SEARCH_RESULT_LIMIT = 1000;
 
-interface SearchResponse {
+interface SearchPage<TNode> {
   search: {
-    nodes: {
-      id: string;
-      number: number;
-      title: string;
-      createdAt: string;
-      reviewDecision: ReviewDecision;
-    }[];
+    nodes: TNode[];
     pageInfo: { hasNextPage: boolean; endCursor: string | null };
   };
 }
 
-interface BotPrStatusResponse {
-  search: {
-    nodes: {
-      number: number;
-      reviewRequests: { totalCount: number };
-      commits: {
-        nodes: {
-          commit: { statusCheckRollup: { state: string } | null };
-        }[];
-      };
-    }[];
-    pageInfo: { hasNextPage: boolean; endCursor: string | null };
+type SearchNode = {
+  id: string;
+  number: number;
+  title: string;
+  createdAt: string;
+  reviewDecision: ReviewDecision;
+};
+
+type BotPrStatusNode = {
+  number: number;
+  reviewRequests: { totalCount: number };
+  commits: {
+    nodes: { commit: { statusCheckRollup: { state: string } | null } }[];
   };
-}
+};
 
 const FAILING_ROLLUP_STATES = ["ERROR", "FAILURE"];
 
@@ -125,6 +120,34 @@ export function createGitHubClient(
   octokitOptions?: OctokitOptions,
 ): GitHubClient {
   const octokit = github.getOctokit(token, octokitOptions);
+
+  // Shared by every search method below: page through `query`/`searchQuery`
+  // via GraphQL, mapping each node, and stop at SEARCH_RESULT_LIMIT.
+  async function paginateSearch<TNode, TItem>(
+    query: string,
+    searchQuery: string,
+    mapNode: (node: TNode) => TItem,
+  ): Promise<TItem[]> {
+    const items: TItem[] = [];
+    let after: string | null = null;
+
+    do {
+      const response: SearchPage<TNode> = await octokit.graphql(query, {
+        searchQuery,
+        after,
+      });
+
+      for (const node of response.search.nodes) {
+        items.push(mapNode(node));
+      }
+
+      after = response.search.pageInfo.hasNextPage
+        ? response.search.pageInfo.endCursor
+        : null;
+    } while (after !== null && items.length < SEARCH_RESULT_LIMIT);
+
+    return items.slice(0, SEARCH_RESULT_LIMIT);
+  }
 
   return {
     async listPrFiles(prNumber) {
@@ -190,59 +213,31 @@ export function createGitHubClient(
     },
 
     async searchQuarantinedPrs(searchQuery) {
-      const prs: QuarantinedPr[] = [];
-      let after: string | null = null;
-
-      do {
-        const response: SearchResponse = await octokit.graphql(SEARCH_QUERY, {
-          searchQuery,
-          after,
-        });
-
-        for (const node of response.search.nodes) {
-          prs.push({
-            id: node.id,
-            number: node.number,
-            title: node.title,
-            createdAt: node.createdAt,
-            reviewDecision: node.reviewDecision,
-          });
-        }
-
-        after = response.search.pageInfo.hasNextPage
-          ? response.search.pageInfo.endCursor
-          : null;
-      } while (after !== null && prs.length < SEARCH_RESULT_LIMIT);
-
-      return prs.slice(0, SEARCH_RESULT_LIMIT);
+      return paginateSearch<SearchNode, QuarantinedPr>(
+        SEARCH_QUERY,
+        searchQuery,
+        (node) => ({
+          id: node.id,
+          number: node.number,
+          title: node.title,
+          createdAt: node.createdAt,
+          reviewDecision: node.reviewDecision,
+        }),
+      );
     },
 
     async searchBotPrStatuses(searchQuery) {
-      const prs: BotPrStatus[] = [];
-      let after: string | null = null;
-
-      do {
-        const response: BotPrStatusResponse = await octokit.graphql(
-          BOT_PR_STATUS_QUERY,
-          { searchQuery, after },
-        );
-
-        for (const node of response.search.nodes) {
-          prs.push({
-            number: node.number,
-            hasReviewRequest: node.reviewRequests.totalCount > 0,
-            hasFailingStatus: FAILING_ROLLUP_STATES.includes(
-              node.commits.nodes[0]?.commit.statusCheckRollup?.state ?? "",
-            ),
-          });
-        }
-
-        after = response.search.pageInfo.hasNextPage
-          ? response.search.pageInfo.endCursor
-          : null;
-      } while (after !== null && prs.length < SEARCH_RESULT_LIMIT);
-
-      return prs.slice(0, SEARCH_RESULT_LIMIT);
+      return paginateSearch<BotPrStatusNode, BotPrStatus>(
+        BOT_PR_STATUS_QUERY,
+        searchQuery,
+        (node) => ({
+          number: node.number,
+          hasReviewRequest: node.reviewRequests.totalCount > 0,
+          hasFailingStatus: FAILING_ROLLUP_STATES.includes(
+            node.commits.nodes[0]?.commit.statusCheckRollup?.state ?? "",
+          ),
+        }),
+      );
     },
 
     async getFileContent(path) {

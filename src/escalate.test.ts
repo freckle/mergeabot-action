@@ -200,3 +200,32 @@ describe("escalateFailingPrs / idempotency and dry-run", () => {
     expect(client.requestReviewers).toHaveBeenCalledWith(7, [], ["team-docs"]);
   });
 });
+
+describe("escalateFailingPrs / per-PR failure isolation", () => {
+  it("keeps processing other PRs after one fails, then fails the run", async () => {
+    const client = fakeClient({
+      searchBotPrStatuses: async () => [
+        status({ number: 7 }),
+        status({ number: 8 }),
+      ],
+      getFileContent: async () => "docs/ @freckle/team-docs",
+      listPrFiles: async () => ["docs/intro.md"],
+      requestReviewers: async (prNumber) => {
+        if (prNumber === 7) {
+          throw new Error("token lacks permission");
+        }
+      },
+    });
+
+    await expect(escalateFailingPrs(inputs(), client)).rejects.toThrow(
+      "Failed to escalate some PRs",
+    );
+
+    expect(client.requestReviewers).toHaveBeenCalledTimes(2);
+    expect(client.createComment).toHaveBeenCalledTimes(1);
+    expect(client.createComment).toHaveBeenCalledWith(
+      8,
+      expect.stringContaining(ESCALATION_MARKER),
+    );
+  });
+});

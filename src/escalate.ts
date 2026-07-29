@@ -56,42 +56,57 @@ export async function escalateFailingPrs(
     (pr) => !pr.hasReviewRequest && pr.hasFailingStatus,
   );
 
+  let hadFailure = false;
+
   for (const pr of candidates) {
-    core.info(`Failing bot PR (#${pr.number})`);
+    try {
+      core.info(`Failing bot PR (#${pr.number})`);
 
-    const files = await client.listPrFiles(pr.number);
-    const team = resolveTeamForPaths(
-      rules,
-      files,
-      inputs.escalationFallbackTeam,
-    );
-    core.info(`  Routed to team: ${team || "<none>"}`);
-
-    if (!team) {
-      core.info("  => Skip (no team resolved and no fallback configured)");
-      continue;
-    }
-
-    if (hasEscalationComment(await client.listCommentBodies(pr.number))) {
-      core.info("  => Skip (already escalated)");
-      continue;
-    }
-
-    if (inputs.dryRun) {
-      core.info(
-        `  => [dry-run] Would request ${team} and post escalation comment`,
+      const files = await client.listPrFiles(pr.number);
+      const team = resolveTeamForPaths(
+        rules,
+        files,
+        inputs.escalationFallbackTeam,
       );
-      continue;
-    }
+      core.info(`  Routed to team: ${team || "<none>"}`);
 
-    core.info(`  => Requesting review from ${team} and posting comment`);
-    await client.requestReviewers(pr.number, [], [team]);
-    await client.createComment(pr.number, escalationCommentBody());
+      if (!team) {
+        core.info("  => Skip (no team resolved and no fallback configured)");
+        continue;
+      }
+
+      if (hasEscalationComment(await client.listCommentBodies(pr.number))) {
+        core.info("  => Skip (already escalated)");
+        continue;
+      }
+
+      if (inputs.dryRun) {
+        core.info(
+          `  => [dry-run] Would request ${team} and post escalation comment`,
+        );
+        continue;
+      }
+
+      core.info(`  => Requesting review from ${team} and posting comment`);
+      await client.requestReviewers(pr.number, [], [team]);
+      await client.createComment(pr.number, escalationCommentBody());
+    } catch (error: unknown) {
+      // One PR's failure (e.g. a token lacking permission to request a team
+      // reviewer) shouldn't abort the whole sweep -- keep going, but still
+      // fail the run afterwards so the problem isn't silently swallowed.
+      hadFailure = true;
+      const message = error instanceof Error ? error.message : String(error);
+      core.error(`  Failed to escalate #${pr.number}: ${message}`);
+    }
   }
 
   if (prs.length === 0) {
     core.info("No open bot PRs found.");
   } else if (candidates.length === 0) {
     core.info("No failing bot PRs without a reviewer found.");
+  }
+
+  if (hadFailure) {
+    throw new Error("Failed to escalate some PRs");
   }
 }
