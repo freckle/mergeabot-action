@@ -96,7 +96,7 @@ jobs:
   mergeabot:
     runs-on: ubuntu-latest
     steps:
-      - uses: freckle/mergeabot-action@v2
+      - uses: freckle/mergeabot-action@v3
 ```
 
 <!-- action-docs-inputs action="action.yml" -->
@@ -144,7 +144,7 @@ jobs:
   Dependabot only:
 
   ```yaml
-  - uses: freckle/mergeabot-action@v2
+  - uses: freckle/mergeabot-action@v3
     with:
       bot-authors: |
         dependabot[bot]
@@ -181,7 +181,7 @@ jobs:
   mergeabot:
     runs-on: ubuntu-latest
     steps:
-      - uses: freckle/mergeabot-action@v2
+      - uses: freckle/mergeabot-action@v3
         with:
           bot-authors: |
             dependabot[bot]
