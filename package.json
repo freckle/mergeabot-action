@@ -14,7 +14,7 @@
     "format": "prettier --write \"**/*.ts\"",
     "format-check": "prettier --check \"**/*.ts\"",
     "knip": "knip",
-    "readme": "pnpm dlx action-docs -u README.md && prettier --write README.md",
+    "readme": "action-docs -u README.md && prettier --write README.md",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -31,6 +31,7 @@
   "devDependencies": {
     "@types/node": "^24.13.3",
     "@vercel/ncc": "^0.44.1",
+    "action-docs": "^2.5.1",
     "knip": "^6.29.0",
     "prettier": "^3.9.6",
     "typescript": "^7.0.2",

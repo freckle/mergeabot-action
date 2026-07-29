@@ -93,6 +93,7 @@ describe("run / bot PR events", () => {
 
     await run(inputs(), openedContext(), client, NOW);
 
+    expect(client.removeRequestedReviewers).toHaveBeenCalledTimes(1);
     expect(client.removeRequestedReviewers).toHaveBeenCalledWith(
       42,
       ["alice"],
@@ -145,6 +146,7 @@ describe("run / bot PR events", () => {
 
     await run(inputs({ dryRun: true }), openedContext(), client, NOW);
 
+    expect(client.removeRequestedReviewers).toHaveBeenCalledTimes(1);
     expect(client.removeRequestedReviewers).toHaveBeenCalledWith(
       42,
       ["alice"],
@@ -210,6 +212,7 @@ describe("run / scheduled scan", () => {
 
     await run(inputs({ quarantineDays: 5 }), scheduleContext, client, NOW);
 
+    expect(client.searchQuarantinedPrs).toHaveBeenCalledTimes(1);
     expect(client.searchQuarantinedPrs).toHaveBeenCalledWith(
       "repo:freckle/mergeabot-action is:pr is:open author:app/dependabot updated:<2024-06-10" +
         " OR " +
@@ -267,6 +270,7 @@ describe("run / scheduled scan", () => {
 
     await run(inputs({ strategy: "squash" }), scheduleContext, client, NOW);
 
+    expect(client.enableAutoMerge).toHaveBeenCalledTimes(1);
     expect(client.enableAutoMerge).toHaveBeenCalledWith("PR_1", "squash");
     expect(client.approve).not.toHaveBeenCalled();
   });
@@ -280,7 +284,9 @@ describe("run / scheduled scan", () => {
 
     await run(inputs({ strategy: "merge" }), scheduleContext, client, NOW);
 
+    expect(client.enableAutoMerge).toHaveBeenCalledTimes(1);
     expect(client.enableAutoMerge).toHaveBeenCalledWith("PR_1", "merge");
+    expect(client.approve).toHaveBeenCalledTimes(1);
     expect(client.approve).toHaveBeenCalledWith(7);
   });
 

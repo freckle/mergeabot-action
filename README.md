@@ -146,16 +146,9 @@ jobs:
         dependabot[bot]
   ```
 
-<!-- action-docs-outputs action="action.yml" -->
-
 ## Outputs
 
-| name | description |
-| ---- | ----------- |
-
-<!-- action-docs-outputs action="action.yml" -->
-
-This Action defines no outputs.
+None.
 
 ## Caveats
 
@@ -178,7 +171,7 @@ pnpm run build   # rebuilds dist/index.js, which must be committed
 CI fails if `dist/index.js` doesn't match what `src/` produces.
 
 After changing anything in [`action.yml`](./action.yml), run `pnpm run readme`
-to re-sync the Inputs/Outputs tables below.
+to re-sync the Inputs table above. CI fails if it's out of date.
 
 ---
 

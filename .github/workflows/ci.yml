@@ -26,6 +26,11 @@ jobs:
       - name: Check dist/ is up to date
         run: git diff --exit-code dist/
 
+      - run: pnpm run readme
+
+      - name: Check README.md is up to date
+        run: git diff --exit-code README.md
+
       - uses: actions/upload-artifact@v7
         with:
           name: dist
