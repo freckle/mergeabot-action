@@ -1,7 +1,12 @@
 import * as github from "@actions/github";
 
 import type { Strategy } from "./inputs.js";
-import type { GitHubClient, QuarantinedPr, ReviewDecision } from "./client.js";
+import type {
+  BotPrStatus,
+  GitHubClient,
+  QuarantinedPr,
+  ReviewDecision,
+} from "./client.js";
 
 type OctokitOptions = Parameters<typeof github.getOctokit>[1];
 
@@ -18,6 +23,34 @@ const SEARCH_QUERY = `
           title
           createdAt
           reviewDecision
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+`;
+
+const BOT_PR_STATUS_QUERY = `
+  query ($searchQuery: String!, $after: String) {
+    search(query: $searchQuery, type: ISSUE_ADVANCED, first: 100, after: $after) {
+      nodes {
+        ... on PullRequest {
+          number
+          reviewRequests {
+            totalCount
+          }
+          commits(last: 1) {
+            nodes {
+              commit {
+                statusCheckRollup {
+                  state
+                }
+              }
+            }
+          }
         }
       }
       pageInfo {
@@ -57,6 +90,32 @@ interface SearchResponse {
     }[];
     pageInfo: { hasNextPage: boolean; endCursor: string | null };
   };
+}
+
+interface BotPrStatusResponse {
+  search: {
+    nodes: {
+      number: number;
+      reviewRequests: { totalCount: number };
+      commits: {
+        nodes: {
+          commit: { statusCheckRollup: { state: string } | null };
+        }[];
+      };
+    }[];
+    pageInfo: { hasNextPage: boolean; endCursor: string | null };
+  };
+}
+
+const FAILING_ROLLUP_STATES = ["ERROR", "FAILURE"];
+
+function isNotFoundError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    error.status === 404
+  );
 }
 
 export function createGitHubClient(
@@ -99,6 +158,16 @@ export function createGitHubClient(
       });
     },
 
+    async requestReviewers(prNumber, reviewers, teamReviewers) {
+      await octokit.rest.pulls.requestReviewers({
+        owner,
+        repo,
+        pull_number: prNumber,
+        reviewers,
+        team_reviewers: teamReviewers,
+      });
+    },
+
     async createComment(issueNumber, body) {
       await octokit.rest.issues.createComment({
         owner,
@@ -106,6 +175,18 @@ export function createGitHubClient(
         issue_number: issueNumber,
         body,
       });
+    },
+
+    async listCommentBodies(issueNumber) {
+      const comments = await octokit.paginate(
+        octokit.rest.issues.listComments,
+        {
+          owner,
+          repo,
+          issue_number: issueNumber,
+        },
+      );
+      return comments.map((comment) => comment.body ?? "");
     },
 
     async searchQuarantinedPrs(searchQuery) {
@@ -134,6 +215,53 @@ export function createGitHubClient(
       } while (after !== null && prs.length < SEARCH_RESULT_LIMIT);
 
       return prs.slice(0, SEARCH_RESULT_LIMIT);
+    },
+
+    async searchBotPrStatuses(searchQuery) {
+      const prs: BotPrStatus[] = [];
+      let after: string | null = null;
+
+      do {
+        const response: BotPrStatusResponse = await octokit.graphql(
+          BOT_PR_STATUS_QUERY,
+          { searchQuery, after },
+        );
+
+        for (const node of response.search.nodes) {
+          prs.push({
+            number: node.number,
+            hasReviewRequest: node.reviewRequests.totalCount > 0,
+            hasFailingStatus: FAILING_ROLLUP_STATES.includes(
+              node.commits.nodes[0]?.commit.statusCheckRollup?.state ?? "",
+            ),
+          });
+        }
+
+        after = response.search.pageInfo.hasNextPage
+          ? response.search.pageInfo.endCursor
+          : null;
+      } while (after !== null && prs.length < SEARCH_RESULT_LIMIT);
+
+      return prs.slice(0, SEARCH_RESULT_LIMIT);
+    },
+
+    async getFileContent(path) {
+      try {
+        // The raw media type returns the file body as a string, which octokit's
+        // types (which describe the JSON response) don't reflect.
+        const { data } = await octokit.rest.repos.getContent({
+          owner,
+          repo,
+          path,
+          mediaType: { format: "raw" },
+        });
+        return data as unknown as string;
+      } catch (error: unknown) {
+        if (isNotFoundError(error)) {
+          return null;
+        }
+        throw error;
+      }
     },
 
     async enableAutoMerge(pullRequestId, strategy) {

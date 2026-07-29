@@ -132,6 +132,134 @@ describe("createGitHubClient / searchQuarantinedPrs", () => {
   });
 });
 
+describe("createGitHubClient / searchBotPrStatuses", () => {
+  function statusNode(
+    number: number,
+    totalCount: number,
+    state: string | null,
+  ): unknown {
+    return {
+      number,
+      reviewRequests: { totalCount },
+      commits: {
+        nodes: [{ commit: { statusCheckRollup: state && { state } } }],
+      },
+    };
+  }
+
+  it("paginates and maps GraphQL search results", async () => {
+    const { client, calls } = clientWithFetch((call) => {
+      const { after } = call.body?.variables as { after: string | null };
+      if (after === null) {
+        return jsonResponse({
+          data: {
+            search: {
+              nodes: [statusNode(1, 0, "FAILURE")],
+              pageInfo: { hasNextPage: true, endCursor: "cursor-1" },
+            },
+          },
+        });
+      }
+      return jsonResponse({
+        data: {
+          search: {
+            nodes: [statusNode(2, 1, "SUCCESS")],
+            pageInfo: { hasNextPage: false, endCursor: null },
+          },
+        },
+      });
+    });
+
+    const prs = await client.searchBotPrStatuses("author:app/dependabot");
+
+    expect(prs).toEqual([
+      { number: 1, hasReviewRequest: false, hasFailingStatus: true },
+      { number: 2, hasReviewRequest: true, hasFailingStatus: false },
+    ]);
+    expect(calls).toHaveLength(2);
+    expect(calls[1].body?.variables).toEqual({
+      searchQuery: "author:app/dependabot",
+      after: "cursor-1",
+    });
+  });
+
+  it.each([
+    ["ERROR", true],
+    ["FAILURE", true],
+    ["SUCCESS", false],
+    ["PENDING", false],
+    ["EXPECTED", false],
+    [null, false],
+  ])("rollup state %s -> hasFailingStatus %s", async (state, expected) => {
+    const { client } = clientWithFetch(() =>
+      jsonResponse({
+        data: {
+          search: {
+            nodes: [statusNode(1, 0, state)],
+            pageInfo: { hasNextPage: false, endCursor: null },
+          },
+        },
+      }),
+    );
+
+    const prs = await client.searchBotPrStatuses("author:app/dependabot");
+
+    expect(prs[0].hasFailingStatus).toBe(expected);
+  });
+
+  it("treats a PR with no commits as not failing", async () => {
+    const { client } = clientWithFetch(() =>
+      jsonResponse({
+        data: {
+          search: {
+            nodes: [
+              {
+                number: 1,
+                reviewRequests: { totalCount: 0 },
+                commits: { nodes: [] },
+              },
+            ],
+            pageInfo: { hasNextPage: false, endCursor: null },
+          },
+        },
+      }),
+    );
+
+    expect(await client.searchBotPrStatuses("author:app/dependabot")).toEqual([
+      { number: 1, hasReviewRequest: false, hasFailingStatus: false },
+    ]);
+  });
+});
+
+describe("createGitHubClient / getFileContent", () => {
+  it("returns the raw file content", async () => {
+    const { client, calls } = clientWithFetch(
+      () =>
+        new Response("* @freckle/team-platform", {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+        }),
+    );
+
+    expect(await client.getFileContent(".github/CODEOWNERS")).toBe(
+      "* @freckle/team-platform",
+    );
+    // octokit percent-encodes the path parameter, which the contents endpoint
+    // accepts.
+    expect(calls[0].url).toContain(
+      "/repos/owner/repo/contents/.github%2FCODEOWNERS",
+    );
+  });
+
+  it("returns null when the file does not exist", async () => {
+    const { client } = clientWithFetch(() =>
+      jsonResponse({ message: "Not Found" }, 404),
+    );
+
+    expect(await client.getFileContent(".github/CODEOWNERS")).toBeNull();
+  });
+});
+
 describe("createGitHubClient / enableAutoMerge", () => {
   it.each([
     ["merge", "MERGE"],
@@ -215,6 +343,39 @@ describe("createGitHubClient / REST-backed methods", () => {
       method: "DELETE",
       body: { reviewers: ["alice"], team_reviewers: ["team-a"] },
     });
+  });
+
+  it("requests reviewers by login and team slug", async () => {
+    const { client, calls } = clientWithFetch(() => jsonResponse({}));
+
+    await client.requestReviewers(1, [], ["team-a"]);
+
+    expect(calls[0]).toMatchObject({
+      method: "POST",
+      url: expect.stringContaining("/pulls/1/requested_reviewers"),
+      body: { reviewers: [], team_reviewers: ["team-a"] },
+    });
+  });
+
+  it("paginates listCommentBodies by body", async () => {
+    const { client, calls } = clientWithFetch((call) => {
+      const linkedFirstPage = !call.url.includes("page=2");
+      const headers = linkedFirstPage
+        ? {
+            link: '<https://api.github.com/repos/owner/repo/issues/1/comments?page=2>; rel="next"',
+          }
+        : {};
+      const body = linkedFirstPage ? [{ body: "first" }] : [{ body: null }];
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "content-type": "application/json", ...headers },
+      });
+    });
+
+    const bodies = await client.listCommentBodies(1);
+
+    expect(bodies).toEqual(["first", ""]);
+    expect(calls).toHaveLength(2);
   });
 
   it("creates a comment with the given body", async () => {

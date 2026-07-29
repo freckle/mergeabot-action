@@ -21,3 +21,17 @@ export function buildSearchQuery(
     )
     .join(" OR ");
 }
+
+// No quarantine window here: escalation considers failing bot PRs of any age.
+export function buildEscalationSearchQuery(
+  owner: string,
+  repo: string,
+  botAuthors: string[],
+): string {
+  return botAuthors
+    .map(
+      (login) =>
+        `repo:${owner}/${repo} is:pr is:open author:${searchAuthorFor(login)}`,
+    )
+    .join(" OR ");
+}
