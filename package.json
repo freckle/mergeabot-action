@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Auto-merge PRs based on config, only after quarantine days",
   "main": "lib/main.js",
-  "packageManager": "pnpm@11.5.2",
+  "packageManager": "pnpm@11.8.0",
   "engines": {
     "node": ">=24"
   },
