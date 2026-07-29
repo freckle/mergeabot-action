@@ -9,6 +9,44 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          cache: pnpm
+          node-version-file: ".nvmrc"
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run format-check
+      - run: pnpm run typecheck
+      - run: pnpm run knip
+      - run: pnpm test
+      - run: pnpm run build
+
+      - name: Check dist/ is up to date
+        run: git diff --exit-code dist/
+
+      - run: pnpm run readme
+
+      - name: Check README.md is up to date
+        run: git diff --exit-code README.md
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/index.js
+
+  integration:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist # overwrite dist/index.js
+
       - id: token
         uses: actions/create-github-app-token@v3
         with:
@@ -20,7 +58,7 @@ jobs:
       # has nothing being kept up to date).
       - uses: ./
         with:
-          dry-run: 1
+          dry-run: true
 
       # Run again with settings that are sure to find something (this repository
       # is really active and should always have open dependabot PRs).
@@ -29,7 +67,7 @@ jobs:
           quarantine-days: -1
           github-token: ${{ steps.token.outputs.token }}
           github-repository: freckle/megarepo
-          dry-run: 1
+          dry-run: true
 
       # Run again exercising exclude-title-regex
       - uses: ./
@@ -38,7 +76,7 @@ jobs:
           quarantine-days: -1
           github-token: ${{ steps.token.outputs.token }}
           github-repository: freckle/megarepo
-          dry-run: 1
+          dry-run: true
 
       # Run as if we were a Dependabot-PR, so we can see the comment
       - uses: ./
