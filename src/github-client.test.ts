@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createGithubClient } from "./githubClient.js";
+import { createGitHubClient } from "./github-client.js";
 
 type Call = {
   url: string;
@@ -17,7 +17,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 function clientWithFetch(
   handler: (call: Call) => Response | Promise<Response>,
-): { client: ReturnType<typeof createGithubClient>; calls: Call[] } {
+): { client: ReturnType<typeof createGitHubClient>; calls: Call[] } {
   const calls: Call[] = [];
 
   const fetch = async (
@@ -33,14 +33,14 @@ function clientWithFetch(
     return handler(call);
   };
 
-  const client = createGithubClient("token", "owner", "repo", {
+  const client = createGitHubClient("token", "owner", "repo", {
     request: { fetch },
   });
 
   return { client, calls };
 }
 
-describe("createGithubClient / searchQuarantinedPrs", () => {
+describe("createGitHubClient / searchQuarantinedPrs", () => {
   it("paginates and maps GraphQL search results", async () => {
     const { client, calls } = clientWithFetch((call) => {
       const after = call.body?.variables as { after: string | null };
@@ -132,7 +132,7 @@ describe("createGithubClient / searchQuarantinedPrs", () => {
   });
 });
 
-describe("createGithubClient / enableAutoMerge", () => {
+describe("createGitHubClient / enableAutoMerge", () => {
   it.each([
     ["merge", "MERGE"],
     ["rebase", "REBASE"],
@@ -156,7 +156,7 @@ describe("createGithubClient / enableAutoMerge", () => {
   );
 });
 
-describe("createGithubClient / REST-backed methods", () => {
+describe("createGitHubClient / REST-backed methods", () => {
   it("maps requested reviewers by login and team slug", async () => {
     const { client } = clientWithFetch(() =>
       jsonResponse({

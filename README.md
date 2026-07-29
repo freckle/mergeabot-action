@@ -99,7 +99,25 @@ jobs:
       - uses: freckle/mergeabot-action@v2
 ```
 
+<!-- action-docs-inputs action="action.yml" -->
+
 ## Inputs
+
+| name                  | description                                                                                                                                                                                                             | required | default                          |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------------- |
+| `exclude-title-regex` | <p>Exclude PRs whose titles match this regular expression</p>                                                                                                                                                           | `true`   | `""`                             |
+| `quarantine-days`     | <p>How long PRs must have gone since their last update to qualify for auto-merge. Default is 5, Set to -1 to disable</p>                                                                                                | `true`   | `5`                              |
+| `strategy`            | <p>How to merge PRs, must be one of merge, rebase, or squash</p>                                                                                                                                                        | `true`   | `rebase`                         |
+| `remove-reviewers`    | <p>Remove any reviewers from bot PRs when they open?</p>                                                                                                                                                                | `true`   | `true`                           |
+| `bot-authors`         | <p>Which PR authors to act on, one login per line. Not limited to bots -- any author login works. Defaults to Dependabot and Renovate. Set to a single-entry list (dependabot[bot]) to restrict to Dependabot only.</p> | `true`   | `dependabot[bot] renovate[bot] ` |
+| `github-actor`        | <p>Override GitHub actor. This is mostly useful in testing.</p>                                                                                                                                                         | `true`   | `${{ github.actor }}`            |
+| `github-repository`   | <p>Override GitHub repository, if necessary</p>                                                                                                                                                                         | `true`   | `${{ github.repository }}`       |
+| `github-token`        | <p>Override GitHub token, if necessary</p>                                                                                                                                                                              | `true`   | `${{ github.token }}`            |
+| `dry-run`             | <p>Set to true to print, but not perform, any actions</p>                                                                                                                                                               | `true`   | `false`                          |
+
+<!-- action-docs-inputs action="action.yml" -->
+
+### Notable Inputs
 
 - `exclude-title-regex`: exclude PRs whose titles match this regular expression
 
@@ -128,11 +146,16 @@ jobs:
         dependabot[bot]
   ```
 
-See [`action.yml`](./action.yml) for other, seldom useful, inputs.
+<!-- action-docs-outputs action="action.yml" -->
 
 ## Outputs
 
-None.
+| name | description |
+| ---- | ----------- |
+
+<!-- action-docs-outputs action="action.yml" -->
+
+This Action defines no outputs.
 
 ## Caveats
 
@@ -153,6 +176,9 @@ pnpm run build   # rebuilds dist/index.js, which must be committed
 ```
 
 CI fails if `dist/index.js` doesn't match what `src/` produces.
+
+After changing anything in [`action.yml`](./action.yml), run `pnpm run readme`
+to re-sync the Inputs/Outputs tables below.
 
 ---
 

@@ -9,52 +9,32 @@ import {
 describe("isBotPrEvent", () => {
   const botAuthors = ["dependabot[bot]", "renovate[bot]"];
 
-  it("is true for a pull_request event from a configured bot author", () => {
-    expect(isBotPrEvent("pull_request", "dependabot[bot]", botAuthors)).toBe(
-      true,
-    );
-    expect(isBotPrEvent("pull_request", "renovate[bot]", botAuthors)).toBe(
-      true,
-    );
-  });
-
-  it("is false for a pull_request event from anyone else", () => {
-    expect(isBotPrEvent("pull_request", "some-human", botAuthors)).toBe(false);
-  });
-
-  it("is false for non pull_request events, even from a bot author", () => {
-    expect(isBotPrEvent("schedule", "dependabot[bot]", botAuthors)).toBe(false);
+  it.each([
+    ["pull_request", "dependabot[bot]", true],
+    ["pull_request", "renovate[bot]", true],
+    ["pull_request", "some-human", false],
+    ["schedule", "dependabot[bot]", false],
+  ])("eventName=%s actor=%s -> %s", (eventName, actor, expected) => {
+    expect(isBotPrEvent(eventName, actor, botAuthors)).toBe(expected);
   });
 });
 
 describe("isExcludedByTitle", () => {
-  it("is false when there is no regex", () => {
-    expect(isExcludedByTitle("Bump foo in /qa", null)).toBe(false);
-  });
-
-  it("is true when the title matches the regex", () => {
-    expect(isExcludedByTitle("Bump foo in /qa", /in \/qa$/)).toBe(true);
-  });
-
-  it("is false when the title does not match the regex", () => {
-    expect(isExcludedByTitle("Bump foo in /app", /in \/qa$/)).toBe(false);
+  it.each([
+    ["Bump foo in /qa", null, false],
+    ["Bump foo in /qa", /in \/qa$/, true],
+    ["Bump foo in /app", /in \/qa$/, false],
+  ])("title=%s regex=%s -> %s", (title, excludeTitleRegex, expected) => {
+    expect(isExcludedByTitle(title, excludeTitleRegex)).toBe(expected);
   });
 });
 
 describe("touchesWorkflows", () => {
-  it("is true when any file is under .github/workflows/", () => {
-    expect(touchesWorkflows(["package.json", ".github/workflows/ci.yml"])).toBe(
-      true,
-    );
-  });
-
-  it("is false otherwise", () => {
-    expect(touchesWorkflows(["package.json", ".github/CODEOWNERS"])).toBe(
-      false,
-    );
-  });
-
-  it("is false for an empty file list", () => {
-    expect(touchesWorkflows([])).toBe(false);
+  it.each([
+    [["package.json", ".github/workflows/ci.yml"], true],
+    [["package.json", ".github/CODEOWNERS"], false],
+    [[], false],
+  ])("paths=%s -> %s", (paths, expected) => {
+    expect(touchesWorkflows(paths)).toBe(expected);
   });
 });

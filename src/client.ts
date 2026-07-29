@@ -1,11 +1,14 @@
-import type { Strategy } from "./config.js";
+import type { Strategy } from "./inputs.js";
+
+export type ReviewDecision =
+  "CHANGES_REQUESTED" | "APPROVED" | "REVIEW_REQUIRED" | null;
 
 export interface QuarantinedPr {
   id: string;
   number: number;
   title: string;
   createdAt: string;
-  reviewDecision: string | null;
+  reviewDecision: ReviewDecision;
 }
 
 export interface RequestedReviewers {
@@ -13,7 +16,7 @@ export interface RequestedReviewers {
   teams: string[];
 }
 
-export interface GithubClient {
+export interface GitHubClient {
   listPrFiles(prNumber: number): Promise<string[]>;
   listRequestedReviewers(prNumber: number): Promise<RequestedReviewers>;
   removeRequestedReviewers(

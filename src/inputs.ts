@@ -1,6 +1,8 @@
+import * as core from "@actions/core";
+
 export type Strategy = "merge" | "rebase" | "squash";
 
-export interface Config {
+export interface Inputs {
   excludeTitleRegex: RegExp | null;
   quarantineDays: number;
   strategy: Strategy;
@@ -13,7 +15,7 @@ export interface Config {
   dryRun: boolean;
 }
 
-export interface RawConfig {
+export interface RawInputs {
   excludeTitleRegex: string;
   quarantineDays: string;
   strategy: string;
@@ -22,10 +24,10 @@ export interface RawConfig {
   actor: string;
   repository: string;
   token: string;
-  dryRun: string;
+  dryRun: boolean;
 }
 
-export function parseConfig(raw: RawConfig): Config {
+export function parseInputs(raw: RawInputs): Inputs {
   const strategy = raw.strategy.trim();
   if (strategy !== "merge" && strategy !== "rebase" && strategy !== "squash") {
     throw new Error(
@@ -52,6 +54,22 @@ export function parseConfig(raw: RawConfig): Config {
     owner,
     repo,
     token: raw.token,
-    dryRun: Number(raw.dryRun) !== 0,
+    dryRun: raw.dryRun,
   };
+}
+
+export function getInputs(): Inputs {
+  return parseInputs({
+    excludeTitleRegex: core.getInput("exclude-title-regex"),
+    quarantineDays: core.getInput("quarantine-days", { required: true }),
+    strategy: core.getInput("strategy", { required: true }),
+    removeReviewers: core.getBooleanInput("remove-reviewers", {
+      required: true,
+    }),
+    botAuthors: core.getMultilineInput("bot-authors", { required: true }),
+    actor: core.getInput("github-actor", { required: true }),
+    repository: core.getInput("github-repository", { required: true }),
+    token: core.getInput("github-token", { required: true }),
+    dryRun: core.getBooleanInput("dry-run", { required: true }),
+  });
 }

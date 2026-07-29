@@ -1,7 +1,8 @@
 import * as core from "@actions/core";
 
-import type { Config } from "./config.js";
-import type { GithubClient } from "./client.js";
+import type { Inputs } from "./inputs.js";
+import type { EventContext } from "./context.js";
+import type { GitHubClient } from "./client.js";
 import {
   isBotPrEvent,
   isExcludedByTitle,
@@ -10,13 +11,6 @@ import {
 import { buildSearchQuery } from "./search.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-export interface EventContext {
-  eventName: string;
-  prAction: string | undefined;
-  prNumber: number | undefined;
-  prTitle: string | undefined;
-}
 
 function formatDate(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
@@ -31,15 +25,15 @@ function describeWhen(quarantineDays: number, now: number): string {
 }
 
 async function handleBotPrEvent(
-  config: Config,
+  inputs: Inputs,
   context: EventContext,
-  client: GithubClient,
+  client: GitHubClient,
   now: number,
 ): Promise<boolean> {
   const title = context.prTitle ?? "";
   const number = context.prNumber;
 
-  if (isExcludedByTitle(title, config.excludeTitleRegex)) {
+  if (isExcludedByTitle(title, inputs.excludeTitleRegex)) {
     return false;
   }
 
@@ -55,7 +49,7 @@ async function handleBotPrEvent(
     // dry-run only gates the scan loop's merge/approve calls below, not these
     // -- removing reviewers and commenting were never gated in the original
     // bash either.
-    if (config.removeReviewers) {
+    if (inputs.removeReviewers) {
       const { users, teams } = await client.listRequestedReviewers(number);
       if (users.length > 0 || teams.length > 0) {
         core.info("Removing requested reviewers");
@@ -63,7 +57,7 @@ async function handleBotPrEvent(
       }
     }
 
-    const whenMessage = describeWhen(config.quarantineDays, now);
+    const whenMessage = describeWhen(inputs.quarantineDays, now);
     const body = `:heavy_check_mark: If all status checks pass, and no other reviews are submitted, [mergeabot][] will merge this PR ${whenMessage}.
 
 As long as that's OK, no other action is necessary.
@@ -77,15 +71,15 @@ As long as that's OK, no other action is necessary.
 }
 
 async function scanForQuarantinedPrs(
-  config: Config,
-  client: GithubClient,
+  inputs: Inputs,
+  client: GitHubClient,
   now: number,
 ): Promise<void> {
-  const since = formatDate(now - config.quarantineDays * DAY_MS);
+  const since = formatDate(now - inputs.quarantineDays * DAY_MS);
   const query = buildSearchQuery(
-    config.owner,
-    config.repo,
-    config.botAuthors,
+    inputs.owner,
+    inputs.repo,
+    inputs.botAuthors,
     since,
   );
   const prs = await client.searchQuarantinedPrs(query);
@@ -95,7 +89,7 @@ async function scanForQuarantinedPrs(
     core.info(`  Created at: ${pr.createdAt}`);
     core.info(`  Current review decision: ${pr.reviewDecision}`);
 
-    if (isExcludedByTitle(pr.title, config.excludeTitleRegex)) {
+    if (isExcludedByTitle(pr.title, inputs.excludeTitleRegex)) {
       core.info("  => Skip (title matches exclude-title-regex)");
       continue;
     }
@@ -112,15 +106,15 @@ async function scanForQuarantinedPrs(
 
       case "APPROVED":
         core.info("  => Enable auto-merge");
-        if (!config.dryRun) {
-          await client.enableAutoMerge(pr.id, config.strategy);
+        if (!inputs.dryRun) {
+          await client.enableAutoMerge(pr.id, inputs.strategy);
         }
         break;
 
       default:
         core.info("  => Enable auto-merge and approve");
-        if (!config.dryRun) {
-          await client.enableAutoMerge(pr.id, config.strategy);
+        if (!inputs.dryRun) {
+          await client.enableAutoMerge(pr.id, inputs.strategy);
           await client.approve(pr.number);
         }
         break;
@@ -133,17 +127,17 @@ async function scanForQuarantinedPrs(
 }
 
 export async function run(
-  config: Config,
+  inputs: Inputs,
   context: EventContext,
-  client: GithubClient,
+  client: GitHubClient,
   now: number = Date.now(),
 ): Promise<void> {
-  if (isBotPrEvent(context.eventName, config.actor, config.botAuthors)) {
-    const handled = await handleBotPrEvent(config, context, client, now);
+  if (isBotPrEvent(context.eventName, inputs.actor, inputs.botAuthors)) {
+    const handled = await handleBotPrEvent(inputs, context, client, now);
     if (handled) {
       return;
     }
   }
 
-  await scanForQuarantinedPrs(config, client, now);
+  await scanForQuarantinedPrs(inputs, client, now);
 }

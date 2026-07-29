@@ -1,7 +1,7 @@
 import * as github from "@actions/github";
 
-import type { Strategy } from "./config.js";
-import type { GithubClient, QuarantinedPr } from "./client.js";
+import type { Strategy } from "./inputs.js";
+import type { GitHubClient, QuarantinedPr, ReviewDecision } from "./client.js";
 
 type OctokitOptions = Parameters<typeof github.getOctokit>[1];
 
@@ -53,18 +53,18 @@ interface SearchResponse {
       number: number;
       title: string;
       createdAt: string;
-      reviewDecision: string | null;
+      reviewDecision: ReviewDecision;
     }[];
     pageInfo: { hasNextPage: boolean; endCursor: string | null };
   };
 }
 
-export function createGithubClient(
+export function createGitHubClient(
   token: string,
   owner: string,
   repo: string,
   octokitOptions?: OctokitOptions,
-): GithubClient {
+): GitHubClient {
   const octokit = github.getOctokit(token, octokitOptions);
 
   return {

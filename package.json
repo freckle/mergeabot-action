@@ -14,6 +14,7 @@
     "format": "prettier --write \"**/*.ts\"",
     "format-check": "prettier --check \"**/*.ts\"",
     "knip": "knip",
+    "readme": "pnpm dlx action-docs -u README.md && prettier --write README.md",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

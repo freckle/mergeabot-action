@@ -53,7 +53,7 @@ jobs:
       # has nothing being kept up to date).
       - uses: ./
         with:
-          dry-run: 1
+          dry-run: true
 
       # Run again with settings that are sure to find something (this repository
       # is really active and should always have open dependabot PRs).
@@ -62,7 +62,7 @@ jobs:
           quarantine-days: -1
           github-token: ${{ steps.token.outputs.token }}
           github-repository: freckle/megarepo
-          dry-run: 1
+          dry-run: true
 
       # Run again exercising exclude-title-regex
       - uses: ./
@@ -71,7 +71,7 @@ jobs:
           quarantine-days: -1
           github-token: ${{ steps.token.outputs.token }}
           github-repository: freckle/megarepo
-          dry-run: 1
+          dry-run: true
 
       # Run as if we were a Dependabot-PR, so we can see the comment
       - uses: ./

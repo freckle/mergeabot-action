@@ -27,12 +27,8 @@ inputs:
   bot-authors:
     description: |
       Which PR authors to act on, one login per line. Not limited to bots --
-      any author login works. Defaults to Dependabot and Renovate; set to
-
-        bot-authors: |
-          dependabot[bot]
-
-      to restrict to Dependabot only.
+      any author login works. Defaults to Dependabot and Renovate. Set to a
+      single-entry list (dependabot[bot]) to restrict to Dependabot only.
     required: true
     default: |
       dependabot[bot]
@@ -54,9 +50,9 @@ inputs:
     default: "${{ github.token }}"
 
   dry-run:
-    description: "Set to 1 to print, but not perform, any actions"
+    description: "Set to true to print, but not perform, any actions"
     required: true
-    default: 0
+    default: false
 
 outputs: {}
 
