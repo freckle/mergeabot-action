@@ -24,10 +24,12 @@ describe("parseCodeowners", () => {
       "team-",
     );
 
+    // Rules come back in reverse-of-file order (last match wins), so
+    // "team-docs" -- the later rule in the file -- is first here.
     expect(rules).toHaveLength(2);
     expect(rules.map((rule) => rule.team)).toEqual([
-      "team-platform",
       "team-docs",
+      "team-platform",
     ]);
   });
 

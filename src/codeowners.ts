@@ -11,16 +11,12 @@ function teamFor(owner: string, teamPrefix: string): string | null {
   return match !== null && match[1].startsWith(teamPrefix) ? match[1] : null;
 }
 
-// Last match wins, as CODEOWNERS itself does. A later rule with no team blanks
-// out an earlier team match, which is the point: it un-owns those paths.
+// CODEOWNERS gives later rules precedence, so `rules` is stored reversed
+// (see parseCodeowners) and the first hit here is the last match in the
+// file. A later rule with no team blanks out an earlier team match, which
+// is the point: it un-owns those paths.
 function teamForPath(rules: CodeownersRule[], path: string): string {
-  let team = "";
-  for (const rule of rules) {
-    if (rule.matcher.ignores(path)) {
-      team = rule.team;
-    }
-  }
-  return team;
+  return rules.find((rule) => rule.matcher.ignores(path))?.team ?? "";
 }
 
 export function parseCodeowners(
@@ -47,7 +43,10 @@ export function parseCodeowners(
     rules.push({ matcher: ignore().add(pattern), team: team ?? "" });
   }
 
-  return rules;
+  // Reversed so lookups can stop at the first match (the last-in-file rule)
+  // instead of scanning to the end -- same technique used by hmarr/codeowners
+  // and codeowners-utils.
+  return rules.reverse();
 }
 
 export function resolveTeamForPaths(
