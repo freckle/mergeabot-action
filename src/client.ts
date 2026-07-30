@@ -11,9 +11,15 @@ export interface QuarantinedPr {
   reviewDecision: ReviewDecision;
 }
 
-export interface RequestedReviewers {
+interface RequestedReviewers {
   users: string[];
   teams: string[];
+}
+
+export interface BotPrStatus {
+  number: number;
+  hasReviewRequest: boolean;
+  hasFailingStatus: boolean;
 }
 
 export interface GitHubClient {
@@ -24,8 +30,17 @@ export interface GitHubClient {
     reviewers: string[],
     teamReviewers: string[],
   ): Promise<void>;
+  requestReviewers(
+    prNumber: number,
+    reviewers: string[],
+    teamReviewers: string[],
+  ): Promise<void>;
   createComment(issueNumber: number, body: string): Promise<void>;
+  listCommentBodies(issueNumber: number): Promise<string[]>;
   searchQuarantinedPrs(query: string): Promise<QuarantinedPr[]>;
+  searchBotPrStatuses(query: string): Promise<BotPrStatus[]>;
+  // null when the file doesn't exist.
+  getFileContent(path: string): Promise<string | null>;
   enableAutoMerge(pullRequestId: string, strategy: Strategy): Promise<void>;
   approve(prNumber: number): Promise<void>;
 }

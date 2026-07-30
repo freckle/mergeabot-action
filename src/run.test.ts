@@ -1,12 +1,9 @@
-import { describe, expect, it, vi, type Mock } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { Inputs } from "./inputs.js";
 import type { EventContext } from "./context.js";
-import type {
-  GitHubClient,
-  QuarantinedPr,
-  RequestedReviewers,
-} from "./client.js";
+import type { QuarantinedPr } from "./client.js";
+import { fakeClient } from "./fake-github-client.js";
 import { run } from "./run.js";
 
 const NOW = new Date("2024-06-15T00:00:00Z").getTime();
@@ -18,39 +15,16 @@ function inputs(overrides: Partial<Inputs> = {}): Inputs {
     strategy: "rebase",
     removeReviewers: true,
     botAuthors: ["dependabot[bot]", "renovate[bot]"],
+    escalate: false,
+    escalationFallbackTeam: "",
+    escalationTeamPrefix: "team-",
+    codeownersPath: ".github/CODEOWNERS",
     actor: "dependabot[bot]",
     owner: "freckle",
     repo: "mergeabot-action",
     token: "token",
     dryRun: false,
     ...overrides,
-  };
-}
-
-type MockedGitHubClient = {
-  [K in keyof GitHubClient]: Mock<GitHubClient[K]>;
-};
-
-function fakeClient(overrides: Partial<GitHubClient> = {}): MockedGitHubClient {
-  const defaults: GitHubClient = {
-    listPrFiles: async () => [],
-    listRequestedReviewers: async () => ({ users: [], teams: [] }),
-    removeRequestedReviewers: async () => undefined,
-    createComment: async () => undefined,
-    searchQuarantinedPrs: async () => [],
-    enableAutoMerge: async () => undefined,
-    approve: async () => undefined,
-  };
-  const merged = { ...defaults, ...overrides };
-
-  return {
-    listPrFiles: vi.fn(merged.listPrFiles),
-    listRequestedReviewers: vi.fn(merged.listRequestedReviewers),
-    removeRequestedReviewers: vi.fn(merged.removeRequestedReviewers),
-    createComment: vi.fn(merged.createComment),
-    searchQuarantinedPrs: vi.fn(merged.searchQuarantinedPrs),
-    enableAutoMerge: vi.fn(merged.enableAutoMerge),
-    approve: vi.fn(merged.approve),
   };
 }
 
@@ -299,6 +273,37 @@ describe("run / scheduled scan", () => {
 
     expect(client.enableAutoMerge).not.toHaveBeenCalled();
     expect(client.approve).not.toHaveBeenCalled();
+  });
+});
+
+describe("run / escalation gating", () => {
+  it("does not escalate when escalate is false", async () => {
+    const client = fakeClient();
+
+    await run(inputs({ escalate: false }), scheduleContext, client, NOW);
+
+    expect(client.searchBotPrStatuses).not.toHaveBeenCalled();
+  });
+
+  it("does not escalate on pull_request events", async () => {
+    const client = fakeClient();
+
+    await run(
+      inputs({ escalate: true, actor: "some-human" }),
+      openedContext(),
+      client,
+      NOW,
+    );
+
+    expect(client.searchBotPrStatuses).not.toHaveBeenCalled();
+  });
+
+  it("escalates on scheduled events when escalate is true", async () => {
+    const client = fakeClient();
+
+    await run(inputs({ escalate: true }), scheduleContext, client, NOW);
+
+    expect(client.searchBotPrStatuses).toHaveBeenCalledTimes(1);
   });
 });
 

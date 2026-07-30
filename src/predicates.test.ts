@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ESCALATION_MARKER,
+  hasEscalationComment,
   isBotPrEvent,
   isExcludedByTitle,
   touchesWorkflows,
@@ -36,5 +38,16 @@ describe("touchesWorkflows", () => {
     [[], false],
   ])("paths=%s -> %s", (paths, expected) => {
     expect(touchesWorkflows(paths)).toBe(expected);
+  });
+});
+
+describe("hasEscalationComment", () => {
+  it.each([
+    [[], false],
+    [["Bump foo", "LGTM"], false],
+    [[`${ESCALATION_MARKER}\nThis PR has failing statuses.`], true],
+    [["LGTM", `${ESCALATION_MARKER} escalated`, "thanks"], true],
+  ])("bodies=%s -> %s", (bodies, expected) => {
+    expect(hasEscalationComment(bodies)).toBe(expected);
   });
 });

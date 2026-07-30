@@ -103,17 +103,21 @@ jobs:
 
 ## Inputs
 
-| name                  | description                                                                                                                                                                                                             | required | default                          |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------------- |
-| `exclude-title-regex` | <p>Exclude PRs whose titles match this regular expression</p>                                                                                                                                                           | `true`   | `""`                             |
-| `quarantine-days`     | <p>How long PRs must have gone since their last update to qualify for auto-merge. Default is 5, Set to -1 to disable</p>                                                                                                | `true`   | `5`                              |
-| `strategy`            | <p>How to merge PRs, must be one of merge, rebase, or squash</p>                                                                                                                                                        | `true`   | `rebase`                         |
-| `remove-reviewers`    | <p>Remove any reviewers from bot PRs when they open?</p>                                                                                                                                                                | `true`   | `true`                           |
-| `bot-authors`         | <p>Which PR authors to act on, one login per line. Not limited to bots -- any author login works. Defaults to Dependabot and Renovate. Set to a single-entry list (dependabot[bot]) to restrict to Dependabot only.</p> | `true`   | `dependabot[bot] renovate[bot] ` |
-| `github-actor`        | <p>Override GitHub actor. This is mostly useful in testing.</p>                                                                                                                                                         | `true`   | `${{ github.actor }}`            |
-| `github-repository`   | <p>Override GitHub repository, if necessary</p>                                                                                                                                                                         | `true`   | `${{ github.repository }}`       |
-| `github-token`        | <p>Override GitHub token, if necessary</p>                                                                                                                                                                              | `true`   | `${{ github.token }}`            |
-| `dry-run`             | <p>Set to true to print, but not perform, any actions</p>                                                                                                                                                               | `true`   | `false`                          |
+| name                       | description                                                                                                                                                                                                                                                                                                | required | default                          |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------------- |
+| `exclude-title-regex`      | <p>Exclude PRs whose titles match this regular expression</p>                                                                                                                                                                                                                                              | `true`   | `""`                             |
+| `quarantine-days`          | <p>How long PRs must have gone since their last update to qualify for auto-merge. Default is 5, Set to -1 to disable</p>                                                                                                                                                                                   | `true`   | `5`                              |
+| `strategy`                 | <p>How to merge PRs, must be one of merge, rebase, or squash</p>                                                                                                                                                                                                                                           | `true`   | `rebase`                         |
+| `remove-reviewers`         | <p>Remove any reviewers from bot PRs when they open?</p>                                                                                                                                                                                                                                                   | `true`   | `true`                           |
+| `bot-authors`              | <p>Which PR authors to act on, one login per line. Not limited to bots -- any author login works. Defaults to Dependabot and Renovate. Set to a single-entry list (dependabot[bot]) to restrict to Dependabot only.</p>                                                                                    | `true`   | `dependabot[bot] renovate[bot] ` |
+| `github-actor`             | <p>Override GitHub actor. This is mostly useful in testing.</p>                                                                                                                                                                                                                                            | `true`   | `${{ github.actor }}`            |
+| `github-repository`        | <p>Override GitHub repository, if necessary</p>                                                                                                                                                                                                                                                            | `true`   | `${{ github.repository }}`       |
+| `github-token`             | <p>Override GitHub token, if necessary</p>                                                                                                                                                                                                                                                                 | `true`   | `${{ github.token }}`            |
+| `dry-run`                  | <p>Set to true to print, but not perform, any actions</p>                                                                                                                                                                                                                                                  | `true`   | `false`                          |
+| `escalate`                 | <p>On scheduled runs, request a team reviewer (and leave a triage comment) on bot PRs that have failing statuses and no reviewer, so they don't sit unmerged and unnoticed. Off by default. Requires a token that can request team reviewers (e.g. a GitHub App token, not the default Actions token).</p> | `true`   | `false`                          |
+| `escalation-fallback-team` | <p>Team slug to request when CODEOWNERS resolves to no team, or to more than one (a PR spanning multiple teams). When empty, such PRs are skipped.</p>                                                                                                                                                     | `true`   | `""`                             |
+| `escalation-team-prefix`   | <p>Only CODEOWNERS owners of the form @org/<prefix>* are treated as routable teams (others, e.g. individuals, are ignored for routing).</p>                                                                                                                                                                | `true`   | `team-`                          |
+| `codeowners-path`          | <p>Path to the CODEOWNERS file used for escalation routing</p>                                                                                                                                                                                                                                             | `true`   | `.github/CODEOWNERS`             |
 
 <!-- action-docs-inputs action="action.yml" -->
 
@@ -145,6 +149,48 @@ jobs:
       bot-authors: |
         dependabot[bot]
   ```
+
+- `escalate`: on scheduled runs, request a team reviewer on failing bot PRs that
+  have no reviewer (see [Escalation](#escalation)). Default is `false`.
+- `escalation-fallback-team`: team slug to request when CODEOWNERS resolves to
+  no team, or to more than one. Empty (the default) skips such PRs.
+- `escalation-team-prefix`: only CODEOWNERS owners of the form `@org/<prefix>*`
+  are treated as routable teams. Default is `team-`.
+- `codeowners-path`: CODEOWNERS file used for escalation routing. Default is
+  `.github/CODEOWNERS`.
+
+## Escalation
+
+Mergeabot removes reviewers from healthy bot PRs, so a requested reviewer should
+mean "this PR needs human attention." `escalate: true` restores the other half
+of that convention: on scheduled runs it finds bot PRs that have **failing
+statuses** (so they can never auto-merge) and **no reviewer**, requests the
+owning team as reviewer, and leaves a one-time triage comment.
+
+The owning team is resolved from `CODEOWNERS` against the PR's changed files
+(last match wins, gitignore-style globbing). Only `@org/<prefix>*` owners count
+as teams; a PR spanning multiple teams (or matching none) routes to
+`escalation-fallback-team`. Comments are idempotent (re-runs are no-ops).
+
+```yaml
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  mergeabot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: freckle/mergeabot-action@v3
+        with:
+          bot-authors: |
+            dependabot[bot]
+            renovate[bot]
+          escalate: true
+          escalation-fallback-team: team-platform
+          # github.token usually can't request team reviewers; pass an App token
+          github-token: ${{ steps.app-token.outputs.token }}
+```
 
 ## Outputs
 
