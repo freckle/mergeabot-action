@@ -3,6 +3,7 @@ import * as core from "@actions/core";
 import type { Inputs } from "./inputs.js";
 import type { EventContext } from "./context.js";
 import type { GitHubClient } from "./client.js";
+import { escalateFailingPrs } from "./escalate.js";
 import {
   isBotPrEvent,
   isExcludedByTitle,
@@ -140,4 +141,10 @@ export async function run(
   }
 
   await scanForQuarantinedPrs(inputs, client, now);
+
+  // Escalation is a sweep over all open bot PRs, not a reaction to one, so it
+  // only runs on scheduled (or manual) events.
+  if (inputs.escalate && context.eventName !== "pull_request") {
+    await escalateFailingPrs(inputs, client);
+  }
 }

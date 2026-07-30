@@ -1,7 +1,12 @@
 import * as github from "@actions/github";
 
 import type { Strategy } from "./inputs.js";
-import type { GitHubClient, QuarantinedPr, ReviewDecision } from "./client.js";
+import type {
+  BotPrStatus,
+  GitHubClient,
+  QuarantinedPr,
+  ReviewDecision,
+} from "./client.js";
 
 type OctokitOptions = Parameters<typeof github.getOctokit>[1];
 
@@ -18,6 +23,34 @@ const SEARCH_QUERY = `
           title
           createdAt
           reviewDecision
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+`;
+
+const BOT_PR_STATUS_QUERY = `
+  query ($searchQuery: String!, $after: String) {
+    search(query: $searchQuery, type: ISSUE_ADVANCED, first: 100, after: $after) {
+      nodes {
+        ... on PullRequest {
+          number
+          reviewRequests {
+            totalCount
+          }
+          commits(last: 1) {
+            nodes {
+              commit {
+                statusCheckRollup {
+                  state
+                }
+              }
+            }
+          }
         }
       }
       pageInfo {
@@ -46,17 +79,38 @@ const MERGE_METHODS: Record<Strategy, "MERGE" | "REBASE" | "SQUASH"> = {
 
 const SEARCH_RESULT_LIMIT = 1000;
 
-interface SearchResponse {
+interface SearchPage<TNode> {
   search: {
-    nodes: {
-      id: string;
-      number: number;
-      title: string;
-      createdAt: string;
-      reviewDecision: ReviewDecision;
-    }[];
+    nodes: TNode[];
     pageInfo: { hasNextPage: boolean; endCursor: string | null };
   };
+}
+
+type SearchNode = {
+  id: string;
+  number: number;
+  title: string;
+  createdAt: string;
+  reviewDecision: ReviewDecision;
+};
+
+type BotPrStatusNode = {
+  number: number;
+  reviewRequests: { totalCount: number };
+  commits: {
+    nodes: { commit: { statusCheckRollup: { state: string } | null } }[];
+  };
+};
+
+const FAILING_ROLLUP_STATES = ["ERROR", "FAILURE"];
+
+function isNotFoundError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    error.status === 404
+  );
 }
 
 export function createGitHubClient(
@@ -66,6 +120,34 @@ export function createGitHubClient(
   octokitOptions?: OctokitOptions,
 ): GitHubClient {
   const octokit = github.getOctokit(token, octokitOptions);
+
+  // Shared by every search method below: page through `query`/`searchQuery`
+  // via GraphQL, mapping each node, and stop at SEARCH_RESULT_LIMIT.
+  async function paginateSearch<TNode, TItem>(
+    query: string,
+    searchQuery: string,
+    mapNode: (node: TNode) => TItem,
+  ): Promise<TItem[]> {
+    const items: TItem[] = [];
+    let after: string | null = null;
+
+    do {
+      const response: SearchPage<TNode> = await octokit.graphql(query, {
+        searchQuery,
+        after,
+      });
+
+      for (const node of response.search.nodes) {
+        items.push(mapNode(node));
+      }
+
+      after = response.search.pageInfo.hasNextPage
+        ? response.search.pageInfo.endCursor
+        : null;
+    } while (after !== null && items.length < SEARCH_RESULT_LIMIT);
+
+    return items.slice(0, SEARCH_RESULT_LIMIT);
+  }
 
   return {
     async listPrFiles(prNumber) {
@@ -99,6 +181,16 @@ export function createGitHubClient(
       });
     },
 
+    async requestReviewers(prNumber, reviewers, teamReviewers) {
+      await octokit.rest.pulls.requestReviewers({
+        owner,
+        repo,
+        pull_number: prNumber,
+        reviewers,
+        team_reviewers: teamReviewers,
+      });
+    },
+
     async createComment(issueNumber, body) {
       await octokit.rest.issues.createComment({
         owner,
@@ -108,32 +200,63 @@ export function createGitHubClient(
       });
     },
 
+    async listCommentBodies(issueNumber) {
+      const comments = await octokit.paginate(
+        octokit.rest.issues.listComments,
+        {
+          owner,
+          repo,
+          issue_number: issueNumber,
+        },
+      );
+      return comments.map((comment) => comment.body ?? "");
+    },
+
     async searchQuarantinedPrs(searchQuery) {
-      const prs: QuarantinedPr[] = [];
-      let after: string | null = null;
+      return paginateSearch<SearchNode, QuarantinedPr>(
+        SEARCH_QUERY,
+        searchQuery,
+        (node) => ({
+          id: node.id,
+          number: node.number,
+          title: node.title,
+          createdAt: node.createdAt,
+          reviewDecision: node.reviewDecision,
+        }),
+      );
+    },
 
-      do {
-        const response: SearchResponse = await octokit.graphql(SEARCH_QUERY, {
-          searchQuery,
-          after,
+    async searchBotPrStatuses(searchQuery) {
+      return paginateSearch<BotPrStatusNode, BotPrStatus>(
+        BOT_PR_STATUS_QUERY,
+        searchQuery,
+        (node) => ({
+          number: node.number,
+          hasReviewRequest: node.reviewRequests.totalCount > 0,
+          hasFailingStatus: FAILING_ROLLUP_STATES.includes(
+            node.commits.nodes[0]?.commit.statusCheckRollup?.state ?? "",
+          ),
+        }),
+      );
+    },
+
+    async getFileContent(path) {
+      try {
+        // The raw media type returns the file body as a string, which octokit's
+        // types (which describe the JSON response) don't reflect.
+        const { data } = await octokit.rest.repos.getContent({
+          owner,
+          repo,
+          path,
+          mediaType: { format: "raw" },
         });
-
-        for (const node of response.search.nodes) {
-          prs.push({
-            id: node.id,
-            number: node.number,
-            title: node.title,
-            createdAt: node.createdAt,
-            reviewDecision: node.reviewDecision,
-          });
+        return data as unknown as string;
+      } catch (error: unknown) {
+        if (isNotFoundError(error)) {
+          return null;
         }
-
-        after = response.search.pageInfo.hasNextPage
-          ? response.search.pageInfo.endCursor
-          : null;
-      } while (after !== null && prs.length < SEARCH_RESULT_LIMIT);
-
-      return prs.slice(0, SEARCH_RESULT_LIMIT);
+        throw error;
+      }
     },
 
     async enableAutoMerge(pullRequestId, strategy) {

@@ -99,3 +99,20 @@ jobs:
           bot-authors: |
             dependabot[bot]
             renovate[bot]
+
+      # Escalation is gated to non-pull_request events; this job only ever
+      # triggers on pull_request, so override GITHUB_EVENT_NAME for this step
+      # only -- @actions/github's Context reads it straight from the env, so
+      # this exercises the real gate without adding a public input for it.
+      - name: Escalation dry-run
+        uses: ./
+        env:
+          GITHUB_EVENT_NAME: schedule
+        with:
+          github-token: ${{ steps.token.outputs.token }}
+          github-repository: freckle/megarepo
+          bot-authors: |
+            renovate[bot]
+          escalate: true
+          escalation-fallback-team: team-platform
+          dry-run: true

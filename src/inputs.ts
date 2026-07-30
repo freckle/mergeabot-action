@@ -8,6 +8,10 @@ export interface Inputs {
   strategy: Strategy;
   removeReviewers: boolean;
   botAuthors: string[];
+  escalate: boolean;
+  escalationFallbackTeam: string;
+  escalationTeamPrefix: string;
+  codeownersPath: string;
   actor: string;
   owner: string;
   repo: string;
@@ -21,6 +25,10 @@ export interface RawInputs {
   strategy: string;
   removeReviewers: boolean;
   botAuthors: string[];
+  escalate: boolean;
+  escalationFallbackTeam: string;
+  escalationTeamPrefix: string;
+  codeownersPath: string;
   actor: string;
   repository: string;
   token: string;
@@ -50,6 +58,10 @@ export function parseInputs(raw: RawInputs): Inputs {
     strategy,
     removeReviewers: raw.removeReviewers,
     botAuthors: raw.botAuthors,
+    escalate: raw.escalate,
+    escalationFallbackTeam: raw.escalationFallbackTeam,
+    escalationTeamPrefix: raw.escalationTeamPrefix,
+    codeownersPath: raw.codeownersPath,
     actor: raw.actor,
     owner,
     repo,
@@ -67,6 +79,14 @@ export function getInputs(): Inputs {
       required: true,
     }),
     botAuthors: core.getMultilineInput("bot-authors", { required: true }),
+    escalate: core.getBooleanInput("escalate", { required: true }),
+    // No { required: true }: this input's default is empty, which getInput
+    // would reject (as with exclude-title-regex).
+    escalationFallbackTeam: core.getInput("escalation-fallback-team"),
+    escalationTeamPrefix: core.getInput("escalation-team-prefix", {
+      required: true,
+    }),
+    codeownersPath: core.getInput("codeowners-path", { required: true }),
     actor: core.getInput("github-actor", { required: true }),
     repository: core.getInput("github-repository", { required: true }),
     token: core.getInput("github-token", { required: true }),

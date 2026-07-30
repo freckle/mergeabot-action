@@ -8,16 +8,39 @@ function searchAuthorFor(login: string): string {
     : login;
 }
 
+function buildBotAuthorSearchQuery(
+  owner: string,
+  repo: string,
+  botAuthors: string[],
+  suffix: string,
+): string {
+  return botAuthors
+    .map(
+      (login) =>
+        `repo:${owner}/${repo} is:pr is:open author:${searchAuthorFor(login)}${suffix}`,
+    )
+    .join(" OR ");
+}
+
 export function buildSearchQuery(
   owner: string,
   repo: string,
   botAuthors: string[],
   since: string,
 ): string {
-  return botAuthors
-    .map(
-      (login) =>
-        `repo:${owner}/${repo} is:pr is:open author:${searchAuthorFor(login)} updated:<${since}`,
-    )
-    .join(" OR ");
+  return buildBotAuthorSearchQuery(
+    owner,
+    repo,
+    botAuthors,
+    ` updated:<${since}`,
+  );
+}
+
+// No quarantine window here: escalation considers failing bot PRs of any age.
+export function buildEscalationSearchQuery(
+  owner: string,
+  repo: string,
+  botAuthors: string[],
+): string {
+  return buildBotAuthorSearchQuery(owner, repo, botAuthors, "");
 }

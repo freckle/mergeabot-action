@@ -9,6 +9,10 @@ function raw(overrides: Partial<RawInputs> = {}): RawInputs {
     strategy: "rebase",
     removeReviewers: true,
     botAuthors: ["dependabot[bot]", "renovate[bot]"],
+    escalate: false,
+    escalationFallbackTeam: "",
+    escalationTeamPrefix: "team-",
+    codeownersPath: ".github/CODEOWNERS",
     actor: "dependabot[bot]",
     repository: "freckle/mergeabot-action",
     token: "some-token",
@@ -62,6 +66,24 @@ describe("parseInputs", () => {
   it("passes dry-run through unchanged", () => {
     expect(parseInputs(raw({ dryRun: false })).dryRun).toBe(false);
     expect(parseInputs(raw({ dryRun: true })).dryRun).toBe(true);
+  });
+
+  it("passes escalate through unchanged", () => {
+    expect(parseInputs(raw({ escalate: false })).escalate).toBe(false);
+    expect(parseInputs(raw({ escalate: true })).escalate).toBe(true);
+  });
+
+  it("passes the escalation routing inputs through unchanged", () => {
+    const inputs = parseInputs(
+      raw({
+        escalationFallbackTeam: "team-platform",
+        escalationTeamPrefix: "squad-",
+        codeownersPath: "CODEOWNERS",
+      }),
+    );
+    expect(inputs.escalationFallbackTeam).toBe("team-platform");
+    expect(inputs.escalationTeamPrefix).toBe("squad-");
+    expect(inputs.codeownersPath).toBe("CODEOWNERS");
   });
 
   it("parses quarantine-days as a number", () => {

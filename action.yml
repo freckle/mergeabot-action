@@ -54,6 +54,34 @@ inputs:
     required: true
     default: false
 
+  escalate:
+    description: |
+      On scheduled runs, request a team reviewer (and leave a triage comment)
+      on bot PRs that have failing statuses and no reviewer, so they don't sit
+      unmerged and unnoticed. Off by default. Requires a token that can request
+      team reviewers (e.g. a GitHub App token, not the default Actions token).
+    required: true
+    default: false
+
+  escalation-fallback-team:
+    description: |
+      Team slug to request when CODEOWNERS resolves to no team, or to more than
+      one (a PR spanning multiple teams). When empty, such PRs are skipped.
+    required: true
+    default: ""
+
+  escalation-team-prefix:
+    description: |
+      Only CODEOWNERS owners of the form @org/<prefix>* are treated as routable
+      teams (others, e.g. individuals, are ignored for routing).
+    required: true
+    default: "team-"
+
+  codeowners-path:
+    description: "Path to the CODEOWNERS file used for escalation routing"
+    required: true
+    default: ".github/CODEOWNERS"
+
 outputs: {}
 
 runs:
