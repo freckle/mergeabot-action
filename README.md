@@ -219,6 +219,10 @@ CI fails if `dist/index.js` doesn't match what `src/` produces.
 After changing anything in [`action.yml`](./action.yml), run `pnpm run readme`
 to re-sync the Inputs table above. CI fails if it's out of date.
 
+## Release
+
+See [RELEASE.md](./RELEASE.md) for more details.
+
 ---
 
 [LICENSE](./LICENSE)
