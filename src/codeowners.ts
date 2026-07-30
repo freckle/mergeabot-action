@@ -6,6 +6,13 @@ export interface CodeownersRule {
   team: string;
 }
 
+// GitHub's CODEOWNERS docs: "!" negation and "[ ]" character ranges "don't
+// work" -- unlike plain gitignore syntax, they must be treated as literal
+// characters, not handed to `ignore` as-is (it implements the full spec).
+function toGithubPattern(pattern: string): string {
+  return pattern.replace(/^!/, "\\!").replace(/[[\]]/g, "\\$&");
+}
+
 function teamFor(owner: string, teamPrefix: string): string | null {
   const match = /^@[^/]+\/(.+)$/.exec(owner);
   return match !== null && match[1].startsWith(teamPrefix) ? match[1] : null;
@@ -40,7 +47,10 @@ export function parseCodeowners(
       .map((owner) => teamFor(owner, teamPrefix))
       .find((slug) => slug !== null);
 
-    rules.push({ matcher: ignore().add(pattern), team: team ?? "" });
+    rules.push({
+      matcher: ignore().add(toGithubPattern(pattern)),
+      team: team ?? "",
+    });
   }
 
   // Reversed so lookups can stop at the first match (the last-in-file rule)

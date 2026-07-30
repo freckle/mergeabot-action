@@ -93,6 +93,18 @@ describe("resolveTeamForPaths / globbing", () => {
     expect(resolve("file?.txt @freckle/team-a", ["fileA.txt"])).toBe("team-a");
     expect(resolve("file?.txt @freckle/team-a", ["file.txt"])).toBe("fallback");
   });
+
+  it("treats a leading ! as a literal character, not negation", () => {
+    expect(resolve("!foo @freckle/team-a", ["!foo"])).toBe("team-a");
+    expect(resolve("!foo @freckle/team-a", ["foo"])).toBe("fallback");
+  });
+
+  it("treats [ ] as literal characters, not a character range", () => {
+    expect(resolve("[abc].txt @freckle/team-a", ["[abc].txt"])).toBe(
+      "team-a",
+    );
+    expect(resolve("[abc].txt @freckle/team-a", ["a.txt"])).toBe("fallback");
+  });
 });
 
 describe("resolveTeamForPaths / last match wins", () => {
