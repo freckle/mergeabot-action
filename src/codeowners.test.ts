@@ -45,6 +45,24 @@ describe("parseCodeowners", () => {
 
     expect(rules[0].team).toBe("");
   });
+
+  it("strips a trailing inline comment before extracting owners", () => {
+    const rules = parseCodeowners(
+      "docs/ #ask @freckle/team-docs about this",
+      "team-",
+    );
+
+    expect(rules[0].team).toBe("");
+  });
+
+  it("keeps real owners on a line with a trailing inline comment", () => {
+    const rules = parseCodeowners(
+      "docs/ @freckle/team-platform #ask @freckle/team-docs about this",
+      "team-",
+    );
+
+    expect(rules[0].team).toBe("team-platform");
+  });
 });
 
 describe("resolveTeamForPaths / globbing", () => {

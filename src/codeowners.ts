@@ -35,7 +35,11 @@ export function parseCodeowners(
       continue;
     }
 
-    const [pattern, ...owners] = trimmed.split(/\s+/);
+    // GitHub allows a trailing "# comment" after the pattern/owners; without
+    // stripping it, a comment that happens to mention "@org/team-*" would be
+    // picked up as a real owner.
+    const withoutComment = trimmed.split("#")[0].trim();
+    const [pattern, ...owners] = withoutComment.split(/\s+/);
     const team = owners
       .map((owner) => teamFor(owner, teamPrefix))
       .find((slug) => slug !== null);
