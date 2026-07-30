@@ -59,20 +59,19 @@ describe("resolveTeamForPaths / globbing", () => {
     ["src/**/main.ts", ["src/main.ts"], "team-a"],
     ["**/vendor", ["vendor"], "team-a"],
     ["**/vendor", ["a/b/vendor"], "team-a"],
-    ["docs/**", ["docs"], "team-a"],
+    ["docs/**", ["docs"], "fallback"], // "**" matches everything *inside*, not the dir itself
     ["docs/**", ["docs/guide/intro.md"], "team-a"],
     ["src/*.ts", ["src/main.ts"], "team-a"],
     ["src/*.ts", ["src/a/main.ts"], "fallback"],
+    ["docs/api/", ["docs/api/intro.md"], "team-a"],
+    ["docs/api/", ["other/docs/api/intro.md"], "fallback"],
   ])("pattern=%s paths=%s -> %s", (pattern, paths, expected) => {
     expect(resolve(`${pattern} @freckle/team-a`, paths)).toBe(expected);
   });
 
-  it("treats ? as a literal character, not a quantifier or wildcard", () => {
-    expect(resolve("file?.txt @freckle/team-a", ["file?.txt"])).toBe("team-a");
+  it("treats ? as gitignore's any-single-character wildcard", () => {
+    expect(resolve("file?.txt @freckle/team-a", ["fileA.txt"])).toBe("team-a");
     expect(resolve("file?.txt @freckle/team-a", ["file.txt"])).toBe("fallback");
-    expect(resolve("file?.txt @freckle/team-a", ["fileA.txt"])).toBe(
-      "fallback",
-    );
   });
 });
 
