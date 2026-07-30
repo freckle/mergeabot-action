@@ -100,9 +100,7 @@ describe("resolveTeamForPaths / globbing", () => {
   });
 
   it("treats [ ] as literal characters, not a character range", () => {
-    expect(resolve("[abc].txt @freckle/team-a", ["[abc].txt"])).toBe(
-      "team-a",
-    );
+    expect(resolve("[abc].txt @freckle/team-a", ["[abc].txt"])).toBe("team-a");
     expect(resolve("[abc].txt @freckle/team-a", ["a.txt"])).toBe("fallback");
   });
 });
