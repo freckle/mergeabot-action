@@ -74,10 +74,10 @@ export function resolveTeamsForPaths(
   }
 
   // Unowned paths contribute nothing, so they don't force a fallback on
-  // their own; only zero matched teams does. A PR spanning multiple teams'
+  // their own; only a zero-team match does. A PR spanning multiple teams'
   // paths is routed to all of them, not the fallback.
   if (teams.size === 0) {
-    return fallbackTeam ? [fallbackTeam] : [];
+    return fallbackTeam !== "" ? [fallbackTeam] : [];
   }
   return [...teams];
 }

@@ -2,13 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import { parseCodeowners, resolveTeamsForPaths } from "./codeowners.js";
 
+// All call sites here exercise the single-team/fallback path (multi-team
+// resolution is tested directly, further below), so this always returns
+// exactly one team.
 function resolve(content: string, paths: string[], fallback = "fallback") {
   const teams = resolveTeamsForPaths(
     parseCodeowners(content, "team-"),
     paths,
     fallback,
   );
-  return teams.length === 1 ? teams[0] : teams.join(",");
+  return teams[0];
 }
 
 describe("parseCodeowners", () => {
@@ -161,5 +164,45 @@ describe("resolveTeamsForPaths / resolution", () => {
 
   it("returns no teams when there is no fallback and nothing matches", () => {
     expect(resolveTeamsForPaths([], ["src/main.ts"], "")).toEqual([]);
+  });
+
+  it("does not duplicate a team matched by more than one path", () => {
+    expect(
+      resolveTeamsForPaths(
+        parseCodeowners(content, "team-"),
+        ["docs/intro.md", "docs/guide.md"],
+        "fallback",
+      ),
+    ).toEqual(["team-docs"]);
+  });
+
+  it("resolves to all matching teams even with no fallback configured", () => {
+    const teams = resolveTeamsForPaths(
+      parseCodeowners(content, "team-"),
+      ["src/main.ts", "docs/intro.md"],
+      "",
+    );
+    expect(teams).toHaveLength(2);
+    expect(teams).toEqual(
+      expect.arrayContaining(["team-platform", "team-docs"]),
+    );
+  });
+
+  it("resolves to three or more matching teams", () => {
+    const threeTeamContent = [
+      "docs/ @freckle/team-docs",
+      "src/ @freckle/team-platform",
+      "infra/ @freckle/team-infra",
+    ].join("\n");
+
+    const teams = resolveTeamsForPaths(
+      parseCodeowners(threeTeamContent, "team-"),
+      ["docs/intro.md", "src/main.ts", "infra/deploy.yml"],
+      "fallback",
+    );
+    expect(teams).toHaveLength(3);
+    expect(teams).toEqual(
+      expect.arrayContaining(["team-docs", "team-platform", "team-infra"]),
+    );
   });
 });
