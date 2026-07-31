@@ -10,7 +10,7 @@ export interface CodeownersRule {
 // work" -- unlike plain gitignore syntax, they must be treated as literal
 // characters, not handed to `ignore` as-is (it implements the full spec).
 function toGithubPattern(pattern: string): string {
-  return pattern.replace(/^!/, "\\!").replace(/[[\]]/g, "\\$&");
+  return pattern.replace(/^!|[[\]]/g, "\\$&");
 }
 
 function teamFor(owner: string, teamPrefix: string): string | null {
