@@ -156,6 +156,23 @@ describe("escalateFailingPrs / team routing", () => {
     expect(client.requestReviewers).not.toHaveBeenCalled();
     expect(client.createComment).not.toHaveBeenCalled();
   });
+
+  it("requests all matching teams even when there is no fallback", async () => {
+    const client = fakeClient({
+      searchBotPrStatuses: async () => [status()],
+      getFileContent: async () => CODEOWNERS,
+      listPrFiles: async () => ["docs/intro.md", "src/main.ts"],
+    });
+
+    await escalateFailingPrs(inputs({ escalationFallbackTeam: "" }), client);
+
+    expect(client.requestReviewers).toHaveBeenCalledTimes(1);
+    const [, , teamReviewers] = client.requestReviewers.mock.calls[0];
+    expect(teamReviewers).toEqual(
+      expect.arrayContaining(["team-platform", "team-docs"]),
+    );
+    expect(teamReviewers).toHaveLength(2);
+  });
 });
 
 describe("escalateFailingPrs / idempotency and dry-run", () => {
