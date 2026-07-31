@@ -24,10 +24,12 @@ describe("parseCodeowners", () => {
       "team-",
     );
 
+    // Rules come back in reverse-of-file order (last match wins), so
+    // "team-docs" -- the later rule in the file -- is first here.
     expect(rules).toHaveLength(2);
     expect(rules.map((rule) => rule.team)).toEqual([
-      "team-platform",
       "team-docs",
+      "team-platform",
     ]);
   });
 
@@ -45,6 +47,24 @@ describe("parseCodeowners", () => {
 
     expect(rules[0].team).toBe("");
   });
+
+  it("strips a trailing inline comment before extracting owners", () => {
+    const rules = parseCodeowners(
+      "docs/ #ask @freckle/team-docs about this",
+      "team-",
+    );
+
+    expect(rules[0].team).toBe("");
+  });
+
+  it("keeps real owners on a line with a trailing inline comment", () => {
+    const rules = parseCodeowners(
+      "docs/ @freckle/team-platform #ask @freckle/team-docs about this",
+      "team-",
+    );
+
+    expect(rules[0].team).toBe("team-platform");
+  });
 });
 
 describe("resolveTeamForPaths / globbing", () => {
@@ -59,20 +79,29 @@ describe("resolveTeamForPaths / globbing", () => {
     ["src/**/main.ts", ["src/main.ts"], "team-a"],
     ["**/vendor", ["vendor"], "team-a"],
     ["**/vendor", ["a/b/vendor"], "team-a"],
-    ["docs/**", ["docs"], "team-a"],
+    ["docs/**", ["docs"], "fallback"], // "**" matches everything *inside*, not the dir itself
     ["docs/**", ["docs/guide/intro.md"], "team-a"],
     ["src/*.ts", ["src/main.ts"], "team-a"],
     ["src/*.ts", ["src/a/main.ts"], "fallback"],
+    ["docs/api/", ["docs/api/intro.md"], "team-a"],
+    ["docs/api/", ["other/docs/api/intro.md"], "fallback"],
   ])("pattern=%s paths=%s -> %s", (pattern, paths, expected) => {
     expect(resolve(`${pattern} @freckle/team-a`, paths)).toBe(expected);
   });
 
-  it("treats ? as a literal character, not a quantifier or wildcard", () => {
-    expect(resolve("file?.txt @freckle/team-a", ["file?.txt"])).toBe("team-a");
+  it("treats ? as gitignore's any-single-character wildcard", () => {
+    expect(resolve("file?.txt @freckle/team-a", ["fileA.txt"])).toBe("team-a");
     expect(resolve("file?.txt @freckle/team-a", ["file.txt"])).toBe("fallback");
-    expect(resolve("file?.txt @freckle/team-a", ["fileA.txt"])).toBe(
-      "fallback",
-    );
+  });
+
+  it("treats a leading ! as a literal character, not negation", () => {
+    expect(resolve("!foo @freckle/team-a", ["!foo"])).toBe("team-a");
+    expect(resolve("!foo @freckle/team-a", ["foo"])).toBe("fallback");
+  });
+
+  it("treats [ ] as literal characters, not a character range", () => {
+    expect(resolve("[abc].txt @freckle/team-a", ["[abc].txt"])).toBe("team-a");
+    expect(resolve("[abc].txt @freckle/team-a", ["a.txt"])).toBe("fallback");
   });
 });
 

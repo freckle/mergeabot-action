@@ -1,70 +1,16 @@
+import ignore, { type Ignore } from "ignore";
+
 export interface CodeownersRule {
-  regex: RegExp;
+  matcher: Ignore;
   // Empty when the rule has no owner matching the configured team prefix.
   team: string;
 }
 
-const REGEX_METACHARS = new Set([
-  ".",
-  "+",
-  "^",
-  "$",
-  "(",
-  ")",
-  "{",
-  "}",
-  "|",
-  "[",
-  "]",
-  "\\",
-  "?", // literal "?", not gitignore's any-single-char wildcard -- out of scope
-]);
-
-// Everything except "*", which globToRegExp translates rather than escapes.
-function escapeMetachars(pattern: string): string {
-  return Array.from(pattern)
-    .map((char) => (REGEX_METACHARS.has(char) ? `\\${char}` : char))
-    .join("");
-}
-
-// gitignore semantics: a leading "/" anchors the pattern to the repository
-// root, otherwise it matches anywhere; a trailing "/" is redundant because
-// every pattern already matches a whole path segment; "**" crosses "/" and
-// may match zero directories (so "a/**/b" also matches "a/b"); a single "*"
-// does not cross "/".
-//
-// Scope: only leading-slash anchoring is implemented -- an interior "/"
-// doesn't anchor the pattern to root the way real gitignore/CODEOWNERS
-// semantics would, and a wildcard segment's trailing "/|$" boundary allows
-// matching arbitrarily nested paths beneath it rather than exactly one
-// segment. Both are real refinements this deliberately doesn't implement:
-// this repo's own CODEOWNERS rules are all leading-slash-anchored with no
-// bare wildcard segments, and getting them right in general requires
-// repo-tree awareness (is a matched segment a file or a directory?) this
-// action doesn't have.
-// One combined pass, not sequential replaces: each case's replacement text
-// itself contains a literal "*" (e.g. ".*"), which a later, separate "*"
-// pass would otherwise re-match and corrupt.
-function globToRegExp(pattern: string): RegExp {
-  const anchored = pattern.startsWith("/");
-  const body = escapeMetachars(
-    pattern.replace(/^\//, "").replace(/\/$/, ""),
-  ).replace(/\/\*\*\/|^\*\*\/|\/\*\*$|\*\*|\*/g, (match) => {
-    switch (match) {
-      case "/**/":
-        return "(?:/.*)?/"; // "**" adjacent to "/" may match zero dirs too
-      case "**/":
-        return "(?:.*/)?";
-      case "/**":
-        return "(?:/.*)?";
-      case "**":
-        return ".*";
-      default:
-        return "[^/]*";
-    }
-  });
-
-  return new RegExp(`${anchored ? "^" : "(^|/)"}${body}(/|$)`);
+// GitHub's CODEOWNERS docs: "!" negation and "[ ]" character ranges "don't
+// work" -- unlike plain gitignore syntax, they must be treated as literal
+// characters, not handed to `ignore` as-is (it implements the full spec).
+function toGithubPattern(pattern: string): string {
+  return pattern.replace(/^!|[[\]]/g, "\\$&");
 }
 
 function teamFor(owner: string, teamPrefix: string): string | null {
@@ -72,16 +18,12 @@ function teamFor(owner: string, teamPrefix: string): string | null {
   return match !== null && match[1].startsWith(teamPrefix) ? match[1] : null;
 }
 
-// Last match wins, as CODEOWNERS itself does. A later rule with no team blanks
-// out an earlier team match, which is the point: it un-owns those paths.
+// CODEOWNERS gives later rules precedence, so `rules` is stored reversed
+// (see parseCodeowners) and the first hit here is the last match in the
+// file. A later rule with no team blanks out an earlier team match, which
+// is the point: it un-owns those paths.
 function teamForPath(rules: CodeownersRule[], path: string): string {
-  let team = "";
-  for (const rule of rules) {
-    if (rule.regex.test(path)) {
-      team = rule.team;
-    }
-  }
-  return team;
+  return rules.find((rule) => rule.matcher.ignores(path))?.team ?? "";
 }
 
 export function parseCodeowners(
@@ -96,15 +38,25 @@ export function parseCodeowners(
       continue;
     }
 
-    const [pattern, ...owners] = trimmed.split(/\s+/);
+    // GitHub allows a trailing "# comment" after the pattern/owners; without
+    // stripping it, a comment that happens to mention "@org/team-*" would be
+    // picked up as a real owner.
+    const withoutComment = trimmed.split("#")[0].trim();
+    const [pattern, ...owners] = withoutComment.split(/\s+/);
     const team = owners
       .map((owner) => teamFor(owner, teamPrefix))
       .find((slug) => slug !== null);
 
-    rules.push({ regex: globToRegExp(pattern), team: team ?? "" });
+    rules.push({
+      matcher: ignore().add(toGithubPattern(pattern)),
+      team: team ?? "",
+    });
   }
 
-  return rules;
+  // Reversed so lookups can stop at the first match (the last-in-file rule)
+  // instead of scanning to the end -- same technique used by hmarr/codeowners
+  // and codeowners-utils.
+  return rules.reverse();
 }
 
 export function resolveTeamForPaths(
