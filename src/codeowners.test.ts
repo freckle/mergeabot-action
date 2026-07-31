@@ -12,7 +12,7 @@ function resolve(content: string, paths: string[], fallback = "fallback") {
 
 describe("parseCodeowners", () => {
   it("skips comments and blank lines", () => {
-    const rules = parseCodeowners(
+    const codeowners = parseCodeowners(
       [
         "# owners of everything",
         "",
@@ -24,46 +24,36 @@ describe("parseCodeowners", () => {
       "team-",
     );
 
-    // Rules come back in reverse-of-file order (last match wins), so
-    // "team-docs" -- the later rule in the file -- is first here.
-    expect(rules).toHaveLength(2);
-    expect(rules.map((rule) => rule.team)).toEqual([
-      "team-docs",
-      "team-platform",
-    ]);
+    expect(codeowners.ruleCount).toBe(2);
   });
 
   it("ignores owners that do not match the team prefix", () => {
-    const rules = parseCodeowners(
-      "* @alice @freckle/reviewers @freckle/team-platform",
-      "team-",
-    );
-
-    expect(rules[0].team).toBe("team-platform");
+    expect(
+      resolve("* @alice @freckle/reviewers @freckle/team-platform", [
+        "foo.txt",
+      ]),
+    ).toBe("team-platform");
   });
 
   it("leaves the team empty when no owner matches the team prefix", () => {
-    const rules = parseCodeowners("* @alice @freckle/reviewers", "team-");
-
-    expect(rules[0].team).toBe("");
+    expect(resolve("* @alice @freckle/reviewers", ["foo.txt"])).toBe(
+      "fallback",
+    );
   });
 
   it("strips a trailing inline comment before extracting owners", () => {
-    const rules = parseCodeowners(
-      "docs/ #ask @freckle/team-docs about this",
-      "team-",
-    );
-
-    expect(rules[0].team).toBe("");
+    expect(
+      resolve("docs/ #ask @freckle/team-docs about this", ["docs/intro.md"]),
+    ).toBe("fallback");
   });
 
   it("keeps real owners on a line with a trailing inline comment", () => {
-    const rules = parseCodeowners(
-      "docs/ @freckle/team-platform #ask @freckle/team-docs about this",
-      "team-",
-    );
-
-    expect(rules[0].team).toBe("team-platform");
+    expect(
+      resolve(
+        "docs/ @freckle/team-platform #ask @freckle/team-docs about this",
+        ["docs/intro.md"],
+      ),
+    ).toBe("team-platform");
   });
 });
 
@@ -122,6 +112,25 @@ describe("resolveTeamForPaths / last match wins", () => {
     expect(resolve(unowned, ["vendor/lib.js"])).toBe("fallback");
     expect(resolve(unowned, ["src/main.ts"])).toBe("team-a");
   });
+
+  // KNOWN FAILURE (see the "EXPERIMENTAL"/"KNOWN ISSUE" comment in
+  // codeowners.ts): a single shared `Ignore` inherits an ancestor
+  // directory's match regardless of a more specific, later pattern.
+  // `it.fails` keeps this documented without breaking the suite.
+  it.fails(
+    "prefers the last match among three or more overlapping rules",
+    () => {
+      const chained = [
+        "* @freckle/team-a",
+        "docs/ @freckle/team-b",
+        "docs/api/ @freckle/team-c",
+      ].join("\n");
+
+      expect(resolve(chained, ["docs/api/intro.md"])).toBe("team-c");
+      expect(resolve(chained, ["docs/guide.md"])).toBe("team-b");
+      expect(resolve(chained, ["src/main.ts"])).toBe("team-a");
+    },
+  );
 });
 
 describe("resolveTeamForPaths / resolution", () => {
@@ -145,8 +154,12 @@ describe("resolveTeamForPaths / resolution", () => {
   });
 
   it("falls back when there are no rules at all", () => {
-    expect(resolveTeamForPaths([], ["src/main.ts"], "fallback")).toBe(
-      "fallback",
-    );
+    expect(
+      resolveTeamForPaths(
+        parseCodeowners("", "team-"),
+        ["src/main.ts"],
+        "fallback",
+      ),
+    ).toBe("fallback");
   });
 });

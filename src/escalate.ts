@@ -5,7 +5,7 @@ import type { GitHubClient } from "./client.js";
 import {
   parseCodeowners,
   resolveTeamForPaths,
-  type CodeownersRule,
+  type Codeowners,
 } from "./codeowners.js";
 import { ESCALATION_MARKER, hasEscalationComment } from "./predicates.js";
 import { buildEscalationSearchQuery } from "./search.js";
@@ -23,21 +23,21 @@ If you are the new reviewer, you should:
 async function loadCodeowners(
   inputs: Inputs,
   client: GitHubClient,
-): Promise<CodeownersRule[]> {
+): Promise<Codeowners> {
   const content = await client.getFileContent(inputs.codeownersPath);
 
   if (content === null) {
     core.warning(
       `Could not read ${inputs.codeownersPath}; using fallback team only`,
     );
-    return [];
+    return parseCodeowners("", inputs.escalationTeamPrefix);
   }
 
-  const rules = parseCodeowners(content, inputs.escalationTeamPrefix);
+  const codeowners = parseCodeowners(content, inputs.escalationTeamPrefix);
   core.info(
-    `Loaded ${rules.length} CODEOWNERS rule(s) from ${inputs.codeownersPath}`,
+    `Loaded ${codeowners.ruleCount} CODEOWNERS rule(s) from ${inputs.codeownersPath}`,
   );
-  return rules;
+  return codeowners;
 }
 
 export async function escalateFailingPrs(

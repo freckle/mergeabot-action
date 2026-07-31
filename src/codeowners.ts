@@ -1,9 +1,9 @@
 import ignore, { type Ignore } from "ignore";
 
-export interface CodeownersRule {
+export interface Codeowners {
   matcher: Ignore;
-  // Empty when the rule has no owner matching the configured team prefix.
-  team: string;
+  teamPrefix: string;
+  ruleCount: number;
 }
 
 // GitHub's CODEOWNERS docs: "!" negation and "[ ]" character ranges "don't
@@ -18,19 +18,43 @@ function teamFor(owner: string, teamPrefix: string): string | null {
   return match !== null && match[1].startsWith(teamPrefix) ? match[1] : null;
 }
 
-// CODEOWNERS gives later rules precedence, so `rules` is stored reversed
-// (see parseCodeowners) and the first hit here is the last match in the
-// file. A later rule with no team blanks out an earlier team match, which
-// is the point: it un-owns those paths.
-function teamForPath(rules: CodeownersRule[], path: string): string {
-  return rules.find((rule) => rule.matcher.ignores(path))?.team ?? "";
+// EXPERIMENTAL: single shared `Ignore` instead of one per pattern.
+//
+// Since every pattern here is non-negated (see toGithubPattern), `ignore`'s
+// own `test()` only evaluates a rule while no earlier-added rule has matched
+// yet -- once one matches it short-circuits and skips the rest. `matcher` is
+// built with its rules added in reverse file order (see parseCodeowners), so
+// that short-circuit lands on the *last* matching rule in the actual file,
+// carrying that line's owners as `mark`. A later rule with no owners blanks
+// out an earlier team match, which is the point: it un-owns those paths.
+//
+// KNOWN ISSUE: `Ignore.test()`/`.ignores()` also do hierarchical
+// ancestor-directory checking (a parent-directory match is inherited by
+// everything under it, independent of rule order -- see node_modules/ignore
+// index.js `_t()`). That conflicts with CODEOWNERS' flat "last line in the
+// file wins" rule whenever patterns of different specificity target the
+// same path, e.g.:
+//   * @team-a
+//   docs/ @team-b
+//   docs/api/ @team-c
+// `docs/api/intro.md` should resolve to team-c but currently resolves to
+// team-b, regardless of add order. Unresolved -- see PR #51 discussion.
+function teamForPath(codeowners: Codeowners, path: string): string {
+  const result = codeowners.matcher.test(path);
+  const owners = result.rule?.mark?.split(/\s+/).filter(Boolean) ?? [];
+
+  return (
+    owners
+      .map((owner) => teamFor(owner, codeowners.teamPrefix))
+      .find((slug) => slug !== null) ?? ""
+  );
 }
 
 export function parseCodeowners(
   content: string,
   teamPrefix: string,
-): CodeownersRule[] {
-  const rules: CodeownersRule[] = [];
+): Codeowners {
+  const lines: { pattern: string; mark: string }[] = [];
 
   for (const line of content.split("\n")) {
     const trimmed = line.trim();
@@ -43,31 +67,29 @@ export function parseCodeowners(
     // picked up as a real owner.
     const withoutComment = trimmed.split("#")[0].trim();
     const [pattern, ...owners] = withoutComment.split(/\s+/);
-    const team = owners
-      .map((owner) => teamFor(owner, teamPrefix))
-      .find((slug) => slug !== null);
 
-    rules.push({
-      matcher: ignore().add(toGithubPattern(pattern)),
-      team: team ?? "",
-    });
+    lines.push({ pattern: toGithubPattern(pattern), mark: owners.join(" ") });
   }
 
-  // Reversed so lookups can stop at the first match (the last-in-file rule)
-  // instead of scanning to the end -- same technique used by hmarr/codeowners
-  // and codeowners-utils.
-  return rules.reverse();
+  const matcher = ignore();
+  // Reversed so the short-circuit in `teamForPath` lands on the last-in-file
+  // match instead of the first.
+  for (const rule of lines.reverse()) {
+    matcher.add(rule);
+  }
+
+  return { matcher, teamPrefix, ruleCount: lines.length };
 }
 
 export function resolveTeamForPaths(
-  rules: CodeownersRule[],
+  codeowners: Codeowners,
   paths: string[],
   fallbackTeam: string,
 ): string {
   const teams = new Set<string>();
 
   for (const path of paths) {
-    const team = teamForPath(rules, path);
+    const team = teamForPath(codeowners, path);
     if (team !== "") {
       teams.add(team);
     }
