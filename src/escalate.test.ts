@@ -143,7 +143,7 @@ describe("escalateFailingPrs / team routing", () => {
     );
   });
 
-  it("falls back when the files resolve to more than one team", async () => {
+  it("requests all matching teams when the files resolve to more than one", async () => {
     const client = fakeClient({
       searchBotPrStatuses: async () => [status()],
       getFileContent: async () => CODEOWNERS,
@@ -152,11 +152,12 @@ describe("escalateFailingPrs / team routing", () => {
 
     await escalateFailingPrs(inputs(), client);
 
-    expect(client.requestReviewers).toHaveBeenCalledWith(
-      1,
-      [],
-      ["team-fallback"],
+    expect(client.requestReviewers).toHaveBeenCalledTimes(1);
+    const [, , teamReviewers] = client.requestReviewers.mock.calls[0];
+    expect(teamReviewers).toEqual(
+      expect.arrayContaining(["team-platform", "team-docs"]),
     );
+    expect(teamReviewers).toHaveLength(2);
   });
 
   it("falls back when no rule matches the files", async () => {

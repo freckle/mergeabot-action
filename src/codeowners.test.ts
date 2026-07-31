@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { parseCodeowners, resolveTeamForPaths } from "./codeowners.js";
+import { parseCodeowners, resolveTeamsForPaths } from "./codeowners.js";
 
 function resolve(content: string, paths: string[], fallback = "fallback") {
-  return resolveTeamForPaths(
+  const teams = resolveTeamsForPaths(
     parseCodeowners(content, "team-"),
     paths,
     fallback,
   );
+  return teams.length === 1 ? teams[0] : teams.join(",");
 }
 
 describe("parseCodeowners", () => {
@@ -67,7 +68,7 @@ describe("parseCodeowners", () => {
   });
 });
 
-describe("resolveTeamForPaths / globbing", () => {
+describe("resolveTeamsForPaths / globbing", () => {
   it.each([
     ["/foo.txt", ["foo.txt"], "team-a"],
     ["/foo.txt", ["sub/foo.txt"], "fallback"],
@@ -105,7 +106,7 @@ describe("resolveTeamForPaths / globbing", () => {
   });
 });
 
-describe("resolveTeamForPaths / last match wins", () => {
+describe("resolveTeamsForPaths / last match wins", () => {
   const content = ["* @freckle/team-a", "docs/ @freckle/team-b"].join("\n");
 
   it("prefers a later rule's team over an earlier one", () => {
@@ -124,7 +125,7 @@ describe("resolveTeamForPaths / last match wins", () => {
   });
 });
 
-describe("resolveTeamForPaths / resolution", () => {
+describe("resolveTeamsForPaths / resolution", () => {
   const content = [
     "docs/ @freckle/team-docs",
     "src/ @freckle/team-platform",
@@ -136,8 +137,16 @@ describe("resolveTeamForPaths / resolution", () => {
     );
   });
 
-  it("falls back when paths resolve to more than one team", () => {
-    expect(resolve(content, ["src/main.ts", "docs/intro.md"])).toBe("fallback");
+  it("resolves to all matching teams when paths resolve to more than one", () => {
+    const teams = resolveTeamsForPaths(
+      parseCodeowners(content, "team-"),
+      ["src/main.ts", "docs/intro.md"],
+      "fallback",
+    );
+    expect(teams).toHaveLength(2);
+    expect(teams).toEqual(
+      expect.arrayContaining(["team-platform", "team-docs"]),
+    );
   });
 
   it("falls back when no rule matches any path", () => {
@@ -145,8 +154,12 @@ describe("resolveTeamForPaths / resolution", () => {
   });
 
   it("falls back when there are no rules at all", () => {
-    expect(resolveTeamForPaths([], ["src/main.ts"], "fallback")).toBe(
+    expect(resolveTeamsForPaths([], ["src/main.ts"], "fallback")).toEqual([
       "fallback",
-    );
+    ]);
+  });
+
+  it("returns no teams when there is no fallback and nothing matches", () => {
+    expect(resolveTeamsForPaths([], ["src/main.ts"], "")).toEqual([]);
   });
 });
