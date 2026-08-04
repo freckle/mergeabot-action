@@ -31,18 +31,26 @@ async function handleBotPrEvent(
   client: GitHubClient,
   now: number,
 ): Promise<boolean> {
-  const title = context.prTitle ?? "";
   const number = context.prNumber;
 
-  if (isExcludedByTitle(title, inputs.excludeTitleRegex)) {
+  if (number === undefined) {
+    core.warning("Excluding PR because number is not known");
     return false;
   }
 
-  if (number === undefined) {
+  const title = context.prTitle ?? "";
+
+  if (isExcludedByTitle(title, inputs.excludeTitleRegex)) {
+    core.warning(
+      `Excluding PR based on title (${title} =~ ${inputs.excludeTitleRegex})`,
+    );
     return false;
   }
 
   if (touchesWorkflows(await client.listPrFiles(number))) {
+    core.warning(
+      "Excluding PR because it touches Workflow files (bots cannot merge)",
+    );
     return false;
   }
 
@@ -53,7 +61,9 @@ async function handleBotPrEvent(
     if (inputs.removeReviewers) {
       const { users, teams } = await client.listRequestedReviewers(number);
       if (users.length > 0 || teams.length > 0) {
-        core.info("Removing requested reviewers");
+        core.info(
+          `Removing ${users.length} user reviewer(s) and ${teams.length} team reviewer(s) from ${inputs.owner}/${inputs.repo}#${number}`,
+        );
         await client.removeRequestedReviewers(number, users, teams);
       }
     }
@@ -65,6 +75,7 @@ As long as that's OK, no other action is necessary.
 
 [mergeabot]: https://github.com/freckle/mergeabot-action`;
 
+    core.info(`Leaving comment on ${inputs.owner}/${inputs.repo}#${number}`);
     await client.createComment(number, body);
   }
 
