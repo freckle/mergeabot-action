@@ -100,7 +100,7 @@ jobs:
           remove-reviewers: false
           github-actor: "dependabot[bot]"
 
-      # Run as if we were a Renovate-PR, to exercise the multiline bot-authors input
+      # Run as if we were a Renovate-PR, exercising multiline bot-authors
       - uses: ./
         with:
           remove-reviewers: false
