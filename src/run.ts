@@ -114,33 +114,37 @@ async function scanForQuarantinedPrs(
 
   for (const pr of prs) {
     core.info(`${pr.title} (#${pr.number})`);
-    core.info(`  Created at: ${pr.createdAt}`);
-    core.info(`  Current review decision: ${pr.reviewDecision}`);
+    core.info(`Created at: ${pr.createdAt}`);
+    core.info(`Current review decision: ${pr.reviewDecision}`);
 
     if (isExcludedByTitle(pr.title, inputs.excludeTitleRegex)) {
-      core.info("  => Skip (title matches exclude-title-regex)");
+      core.warning(
+        `Excluding PR based on title (${title} =~ ${inputs.excludeTitleRegex})`,
+      );
       continue;
     }
 
     if (touchesWorkflows(await client.listPrFiles(pr.number))) {
-      core.info("  => Skip (PR updates workflows)");
+      core.warning(
+        "Excluding PR because it touches Workflow files (bots cannot merge)",
+      );
       continue;
     }
 
     switch (pr.reviewDecision) {
       case "CHANGES_REQUESTED":
-        core.info("  => Skip (changes requested)");
+        core.warning("Excluding PR because changes have been requested");
         break;
 
       case "APPROVED":
-        core.info("  => Enable auto-merge");
+        core.info("Enable auto-merge (PR already approved)");
         await unlessDryRun(inputs, async () => {
           await client.enableAutoMerge(pr.id, inputs.strategy);
         });
         break;
 
       default:
-        core.info("  => Enable auto-merge and approve");
+        core.info("Enable auto-merge and approve");
         await unlessDryRun(inputs, async () => {
           await client.enableAutoMerge(pr.id, inputs.strategy);
           await client.approve(pr.number);
