@@ -1,0 +1,24 @@
+plugins:
+  - - "@semantic-release/commit-analyzer"
+    - preset: "conventionalcommits"
+  - - "@semantic-release/release-notes-generator"
+    - preset: "conventionalcommits"
+  - - "@semantic-release/github"
+    - successCommentCondition: false
+
+  - "semantic-release-major-tag"
+
+  # Update dist and README if necessary
+  - - "@semantic-release/exec"
+    - prepareCmd: "pnpm install && pnpm run build && pnpm run readme"
+
+  - - "@semantic-release/git"
+    - assets:
+        - "README.md"
+        - "dist/index.js"
+      message: "chore(release): update assets"
+
+branches:
+  - main
+  - name: rc/*
+    prerelease: '${name.replace(/^rc\//, "rc-")}'
