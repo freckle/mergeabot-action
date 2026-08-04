@@ -49,12 +49,16 @@ jobs:
       # Run once with settings that are sure to find nothing (this repository
       # has nothing being kept up to date).
       - uses: ./
+        env:
+          GITHUB_EVENT_NAME: schedule
         with:
           dry-run: true
 
       # Run again with settings that are sure to find something (this repository
       # is really active and should always have open dependabot PRs).
       - uses: ./
+        env:
+          GITHUB_EVENT_NAME: schedule
         with:
           quarantine-days: -1
           github-token: ${{ steps.token.outputs.token }}
@@ -63,6 +67,8 @@ jobs:
 
       # Run again exercising exclude-title-regex
       - uses: ./
+        env:
+          GITHUB_EVENT_NAME: schedule
         with:
           exclude-title-regex: 'in /qa$'
           quarantine-days: -1
