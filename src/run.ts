@@ -25,6 +25,18 @@ function describeWhen(quarantineDays: number, now: number): string {
   return `after ${quarantineDays} day(s), on ${until}`;
 }
 
+async function unlessDryRun(
+  inputs: Inputs,
+  fn: () => Promise<void>,
+): Promise<void> {
+  if (inputs.dryRun) {
+    core.info("(skipping action due to dry-run)");
+    return;
+  }
+
+  return await fn();
+}
+
 async function handleBotPrEvent(
   inputs: Inputs,
   context: EventContext,
@@ -64,7 +76,9 @@ async function handleBotPrEvent(
         core.info(
           `Removing ${users.length} user reviewer(s) and ${teams.length} team reviewer(s) from ${inputs.owner}/${inputs.repo}#${number}`,
         );
-        await client.removeRequestedReviewers(number, users, teams);
+        await unlessDryRun(inputs, async () => {
+          await client.removeRequestedReviewers(number, users, teams);
+        });
       }
     }
 
@@ -76,7 +90,9 @@ As long as that's OK, no other action is necessary.
 [mergeabot]: https://github.com/freckle/mergeabot-action`;
 
     core.info(`Leaving comment on ${inputs.owner}/${inputs.repo}#${number}`);
-    await client.createComment(number, body);
+    await unlessDryRun(inputs, async () => {
+      await client.createComment(number, body);
+    });
   }
 
   return true;
@@ -118,17 +134,17 @@ async function scanForQuarantinedPrs(
 
       case "APPROVED":
         core.info("  => Enable auto-merge");
-        if (!inputs.dryRun) {
+        await unlessDryRun(inputs, async () => {
           await client.enableAutoMerge(pr.id, inputs.strategy);
-        }
+        });
         break;
 
       default:
         core.info("  => Enable auto-merge and approve");
-        if (!inputs.dryRun) {
+        await unlessDryRun(inputs, async () => {
           await client.enableAutoMerge(pr.id, inputs.strategy);
           await client.approve(pr.number);
-        }
+        });
         break;
     }
   }

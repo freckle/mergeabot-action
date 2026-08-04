@@ -121,23 +121,6 @@ describe("run / bot PR events", () => {
     expect(body).toContain("after 5 day(s), on 2024-06-20");
   });
 
-  it("still removes reviewers and comments in dry-run mode -- dry-run only gates the scan's merge/approve", async () => {
-    const client = fakeClient({
-      listRequestedReviewers: async () => ({ users: ["alice"], teams: [] }),
-    });
-
-    await run(inputs({ dryRun: true }), openedContext(), client, NOW);
-
-    expect(client.removeRequestedReviewers).toHaveBeenCalledTimes(1);
-    expect(client.removeRequestedReviewers).toHaveBeenCalledWith(
-      42,
-      ["alice"],
-      [],
-    );
-    expect(client.createComment).toHaveBeenCalledTimes(1);
-    expect(client.searchQuarantinedPrs).not.toHaveBeenCalled();
-  });
-
   it("does nothing extra for non-opened actions on a bot PR, besides exiting early", async () => {
     const client = fakeClient();
 
