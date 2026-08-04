@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Inputs } from "./inputs.js";
 import type { EventContext } from "./context.js";
@@ -7,6 +7,14 @@ import { fakeClient } from "./fake-github-client.js";
 import { run } from "./run.js";
 
 const NOW = new Date("2024-06-15T00:00:00Z").getTime();
+
+// Silence logging
+vi.mock(import("@actions/core"), () => {
+  return {
+    info: vi.fn(),
+    warning: vi.fn(),
+  };
+});
 
 function inputs(overrides: Partial<Inputs> = {}): Inputs {
   return {

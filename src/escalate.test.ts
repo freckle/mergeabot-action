@@ -1,10 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { BotPrStatus } from "./client.js";
 import type { Inputs } from "./inputs.js";
 import { escalateFailingPrs } from "./escalate.js";
 import { fakeClient } from "./fake-github-client.js";
 import { ESCALATION_MARKER } from "./predicates.js";
+
+// Silence logging
+vi.mock(import("@actions/core"), () => {
+  return {
+    info: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn(),
+  };
+});
 
 const CODEOWNERS = [
   "* @freckle/team-platform",
