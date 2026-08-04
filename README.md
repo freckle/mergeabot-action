@@ -214,10 +214,22 @@ pnpm test
 pnpm run build   # rebuilds dist/index.js, which must be committed
 ```
 
-CI fails if `dist/index.js` doesn't match what `src/` produces.
-
 After changing anything in [`action.yml`](./action.yml), run `pnpm run readme`
 to re-sync the Inputs table above. CI fails if it's out of date.
+
+## Release
+
+To trigger a release (and update the `@v{major}` tag), merge a commit to `main`
+that follows [Conventional Commits][]. In short,
+
+- `fix:` to trigger a patch release,
+- `feat:` to trigger minor, or
+- `<type>!:` or add a `BREAKING CHANGE:` trailer to trigger major
+
+We don't enforce conventional commits generally (though you are free do so),
+it's only required if you want to trigger release.
+
+[conventional commits]: https://www.conventionalcommits.org/en/v1.0.0/#summary
 
 ---
 
