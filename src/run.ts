@@ -95,7 +95,9 @@ As long as that's OK, no other action is necessary.
 
 [mergeabot]: https://github.com/freckle/mergeabot-action`;
 
-    core.info(`Leaving comment on ${inputs.owner}/${inputs.repo}#${number}`);
+    core.info(
+      `Leaving comment on ${chalk.bold(`${inputs.owner}/${inputs.repo}#${number}`)}`,
+    );
     await unlessDryRun(inputs, async () => {
       await client.createComment(number, body);
     });
