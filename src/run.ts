@@ -47,7 +47,7 @@ async function handleBotPrEvent(
   const number = context.prNumber;
 
   if (number === undefined) {
-    core.warning("Excluding PR because number is not known");
+    core.warning("Skipping PR because number is not known");
     return false;
   }
 
@@ -55,14 +55,14 @@ async function handleBotPrEvent(
 
   if (isExcludedByTitle(title, inputs.excludeTitleRegex)) {
     core.warning(
-      `Excluding PR based on title ${chalk.gray(`(${title} =~ ${inputs.excludeTitleRegex})`)}`,
+      `Skipping PR based on title ${chalk.gray(`(${title} =~ ${inputs.excludeTitleRegex})`)}`,
     );
     return false;
   }
 
   if (touchesWorkflows(await client.listPrFiles(number))) {
     core.warning(
-      "Excluding PR because it touches Workflow files (bots cannot merge)",
+      "Skipping PR because it touches Workflow files (bots cannot merge)",
     );
     return false;
   }
@@ -120,21 +120,21 @@ async function scanForQuarantinedPrs(
 
     if (isExcludedByTitle(pr.title, inputs.excludeTitleRegex)) {
       core.warning(
-        `Excluding PR based on title ${chalk.gray(`(${pr.title} =~ ${inputs.excludeTitleRegex})`)}`,
+        `Skipping PR based on title ${chalk.gray(`(${pr.title} =~ ${inputs.excludeTitleRegex})`)}`,
       );
       continue;
     }
 
     if (touchesWorkflows(await client.listPrFiles(pr.number))) {
       core.warning(
-        `Excluding PR because it touches Workflow files ${chalk.gray("(bots cannot merge)")}`,
+        `Skipping PR because it touches Workflow files ${chalk.gray("(bots cannot merge)")}`,
       );
       continue;
     }
 
     switch (pr.reviewDecision) {
       case "CHANGES_REQUESTED":
-        core.warning("Excluding PR because changes have been requested");
+        core.warning("Skipping PR because changes have been requested");
         break;
 
       case "APPROVED":
