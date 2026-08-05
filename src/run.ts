@@ -14,6 +14,11 @@ import { buildSearchQuery } from "./search.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// https://github.com/chalk/supports-color/issues/106
+if (process.env.GITHUB_ACTIONS) {
+  chalk.level = 2; // 256 colors
+}
+
 function formatDate(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
