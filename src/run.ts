@@ -62,7 +62,7 @@ async function handleBotPrEvent(
 
   if (touchesWorkflows(await client.listPrFiles(number))) {
     core.warning(
-      "Skipping PR because it touches Workflow files (bots cannot merge)",
+      `Skipping PR because it touches Workflow files ${chalk.gray("(bots cannot merge)")}`,
     );
     return false;
   }
