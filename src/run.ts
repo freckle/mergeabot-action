@@ -3,7 +3,7 @@ import chalk from "chalk";
 
 import type { Inputs } from "./inputs.js";
 import type { EventContext } from "./context.js";
-import type { GitHubClient } from "./client.js";
+import type { GitHubClient, ReviewDecision } from "./client.js";
 import { escalateFailingPrs } from "./escalate.js";
 import {
   isBotPrEvent,
@@ -119,9 +119,11 @@ async function scanForQuarantinedPrs(
   const prs = await client.searchQuarantinedPrs(query);
 
   for (const pr of prs) {
-    core.info(`${pr.title} (#${pr.number})`);
-    core.info(`Created at: ${pr.createdAt}`);
-    core.info(`Current review decision: ${pr.reviewDecision}`);
+    core.info(chalk.bold(`${pr.title} (#${pr.number})`));
+    core.info(`Created at: ${chalk.blue(pr.createdAt)}`);
+    core.info(
+      `Current review decision: ${colorizeReviewDecision(pr.reviewDecision)}`,
+    );
 
     if (isExcludedByTitle(pr.title, inputs.excludeTitleRegex)) {
       core.warning(
@@ -161,6 +163,17 @@ async function scanForQuarantinedPrs(
 
   if (prs.length === 0) {
     core.info(`No bot PRs found older than ${chalk.blue(since)}.`);
+  }
+}
+
+function colorizeReviewDecision(reviewDecision: ReviewDecision): string {
+  switch (reviewDecision) {
+    case "CHANGES_REQUESTED":
+      return chalk.yellow(reviewDecision);
+    case "APPROVED":
+      return chalk.green(reviewDecision);
+    default:
+      return chalk.gray(reviewDecision);
   }
 }
 
