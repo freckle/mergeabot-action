@@ -1,4 +1,5 @@
 import * as core from "@actions/core";
+import chalk from "chalk";
 
 import type { Inputs } from "./inputs.js";
 import type { EventContext } from "./context.js";
@@ -30,7 +31,7 @@ async function unlessDryRun(
   fn: () => Promise<void>,
 ): Promise<void> {
   if (inputs.dryRun) {
-    core.info("(skipping action due to dry-run)");
+    core.info(chalk.gray("(skipping action due to dry-run)"));
     return;
   }
 
@@ -54,7 +55,7 @@ async function handleBotPrEvent(
 
   if (isExcludedByTitle(title, inputs.excludeTitleRegex)) {
     core.warning(
-      `Excluding PR based on title (${title} =~ ${inputs.excludeTitleRegex})`,
+      `Excluding PR based on title ${chalk.gray(`(${title} =~ ${inputs.excludeTitleRegex})`)}`,
     );
     return false;
   }
@@ -74,7 +75,7 @@ async function handleBotPrEvent(
       const { users, teams } = await client.listRequestedReviewers(number);
       if (users.length > 0 || teams.length > 0) {
         core.info(
-          `Removing ${users.length} user reviewer(s) and ${teams.length} team reviewer(s) from ${inputs.owner}/${inputs.repo}#${number}`,
+          `Removing ${chalk.cyan(users.length)} user reviewer(s) and ${chalk.cyan(teams.length)} team reviewer(s) from ${chalk.bold(`${inputs.owner}/${inputs.repo}#${number}`)}`,
         );
         await unlessDryRun(inputs, async () => {
           await client.removeRequestedReviewers(number, users, teams);
@@ -119,14 +120,14 @@ async function scanForQuarantinedPrs(
 
     if (isExcludedByTitle(pr.title, inputs.excludeTitleRegex)) {
       core.warning(
-        `Excluding PR based on title (${title} =~ ${inputs.excludeTitleRegex})`,
+        `Excluding PR based on title ${chalk.gray(`(${pr.title} =~ ${inputs.excludeTitleRegex})`)}`,
       );
       continue;
     }
 
     if (touchesWorkflows(await client.listPrFiles(pr.number))) {
       core.warning(
-        "Excluding PR because it touches Workflow files (bots cannot merge)",
+        `Excluding PR because it touches Workflow files ${chalk.gray("(bots cannot merge)")}`,
       );
       continue;
     }
@@ -137,7 +138,7 @@ async function scanForQuarantinedPrs(
         break;
 
       case "APPROVED":
-        core.info("Enable auto-merge (PR already approved)");
+        core.info(`Enable auto-merge ${chalk.gray("(PR already approved)")}`);
         await unlessDryRun(inputs, async () => {
           await client.enableAutoMerge(pr.id, inputs.strategy);
         });
@@ -154,7 +155,7 @@ async function scanForQuarantinedPrs(
   }
 
   if (prs.length === 0) {
-    core.info(`No bot PRs found older than ${since}.`);
+    core.info(`No bot PRs found older than ${chalk.blue(since)}.`);
   }
 }
 
