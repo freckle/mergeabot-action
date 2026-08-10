@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { parseCodeowners, resolveTeamForPaths } from "./codeowners.js";
+import { parseCodeowners, resolveTeamsForPaths } from "./codeowners.js";
 
+// All call sites here exercise the single-team/fallback path (multi-team
+// resolution is tested directly, further below), so this always returns
+// exactly one team.
 function resolve(content: string, paths: string[], fallback = "fallback") {
-  return resolveTeamForPaths(
+  const teams = resolveTeamsForPaths(
     parseCodeowners(content, "team-"),
     paths,
     fallback,
   );
+  return teams[0];
 }
 
 describe("parseCodeowners", () => {
@@ -67,7 +71,7 @@ describe("parseCodeowners", () => {
   });
 });
 
-describe("resolveTeamForPaths / globbing", () => {
+describe("resolveTeamsForPaths / globbing", () => {
   it.each([
     ["/foo.txt", ["foo.txt"], "team-a"],
     ["/foo.txt", ["sub/foo.txt"], "fallback"],
@@ -105,7 +109,7 @@ describe("resolveTeamForPaths / globbing", () => {
   });
 });
 
-describe("resolveTeamForPaths / last match wins", () => {
+describe("resolveTeamsForPaths / last match wins", () => {
   const content = ["* @freckle/team-a", "docs/ @freckle/team-b"].join("\n");
 
   it("prefers a later rule's team over an earlier one", () => {
@@ -124,7 +128,7 @@ describe("resolveTeamForPaths / last match wins", () => {
   });
 });
 
-describe("resolveTeamForPaths / resolution", () => {
+describe("resolveTeamsForPaths / resolution", () => {
   const content = [
     "docs/ @freckle/team-docs",
     "src/ @freckle/team-platform",
@@ -136,8 +140,16 @@ describe("resolveTeamForPaths / resolution", () => {
     );
   });
 
-  it("falls back when paths resolve to more than one team", () => {
-    expect(resolve(content, ["src/main.ts", "docs/intro.md"])).toBe("fallback");
+  it("resolves to all matching teams when paths resolve to more than one", () => {
+    const teams = resolveTeamsForPaths(
+      parseCodeowners(content, "team-"),
+      ["src/main.ts", "docs/intro.md"],
+      "fallback",
+    );
+    expect(teams).toHaveLength(2);
+    expect(teams).toEqual(
+      expect.arrayContaining(["team-platform", "team-docs"]),
+    );
   });
 
   it("falls back when no rule matches any path", () => {
@@ -145,8 +157,52 @@ describe("resolveTeamForPaths / resolution", () => {
   });
 
   it("falls back when there are no rules at all", () => {
-    expect(resolveTeamForPaths([], ["src/main.ts"], "fallback")).toBe(
+    expect(resolveTeamsForPaths([], ["src/main.ts"], "fallback")).toEqual([
       "fallback",
+    ]);
+  });
+
+  it("returns no teams when there is no fallback and nothing matches", () => {
+    expect(resolveTeamsForPaths([], ["src/main.ts"], "")).toEqual([]);
+  });
+
+  it("does not duplicate a team matched by more than one path", () => {
+    expect(
+      resolveTeamsForPaths(
+        parseCodeowners(content, "team-"),
+        ["docs/intro.md", "docs/guide.md"],
+        "fallback",
+      ),
+    ).toEqual(["team-docs"]);
+  });
+
+  it("resolves to all matching teams even with no fallback configured", () => {
+    const teams = resolveTeamsForPaths(
+      parseCodeowners(content, "team-"),
+      ["src/main.ts", "docs/intro.md"],
+      "",
+    );
+    expect(teams).toHaveLength(2);
+    expect(teams).toEqual(
+      expect.arrayContaining(["team-platform", "team-docs"]),
+    );
+  });
+
+  it("resolves to three or more matching teams", () => {
+    const threeTeamContent = [
+      "docs/ @freckle/team-docs",
+      "src/ @freckle/team-platform",
+      "infra/ @freckle/team-infra",
+    ].join("\n");
+
+    const teams = resolveTeamsForPaths(
+      parseCodeowners(threeTeamContent, "team-"),
+      ["docs/intro.md", "src/main.ts", "infra/deploy.yml"],
+      "fallback",
+    );
+    expect(teams).toHaveLength(3);
+    expect(teams).toEqual(
+      expect.arrayContaining(["team-docs", "team-platform", "team-infra"]),
     );
   });
 });

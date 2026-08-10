@@ -4,7 +4,7 @@ import type { Inputs } from "./inputs.js";
 import type { GitHubClient } from "./client.js";
 import {
   parseCodeowners,
-  resolveTeamForPaths,
+  resolveTeamsForPaths,
   type CodeownersRule,
 } from "./codeowners.js";
 import { ESCALATION_MARKER, hasEscalationComment } from "./predicates.js";
@@ -63,14 +63,16 @@ export async function escalateFailingPrs(
       core.info(`Failing bot PR (#${pr.number})`);
 
       const files = await client.listPrFiles(pr.number);
-      const team = resolveTeamForPaths(
+      const teams = resolveTeamsForPaths(
         rules,
         files,
         inputs.escalationFallbackTeam,
       );
-      core.info(`  Routed to team: ${team || "<none>"}`);
+      core.info(
+        `  Routed to team(s): ${teams.length > 0 ? teams.join(", ") : "<none>"}`,
+      );
 
-      if (!team) {
+      if (teams.length === 0) {
         core.info("  => Skip (no team resolved and no fallback configured)");
         continue;
       }
@@ -82,13 +84,15 @@ export async function escalateFailingPrs(
 
       if (inputs.dryRun) {
         core.info(
-          `  => [dry-run] Would request ${team} and post escalation comment`,
+          `  => [dry-run] Would request ${teams.join(", ")} and post escalation comment`,
         );
         continue;
       }
 
-      core.info(`  => Requesting review from ${team} and posting comment`);
-      await client.requestReviewers(pr.number, [], [team]);
+      core.info(
+        `  => Requesting review from ${teams.join(", ")} and posting comment`,
+      );
+      await client.requestReviewers(pr.number, [], teams);
       await client.createComment(pr.number, escalationCommentBody());
     } catch (error: unknown) {
       // One PR's failure (e.g. a token lacking permission to request a team
