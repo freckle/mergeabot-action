@@ -82,6 +82,13 @@ inputs:
     required: true
     default: ".github/CODEOWNERS"
 
+  escalation-comment-suffix:
+    description: |
+      Arbitrary text appended to the escalation comment. Empty by default,
+      which leaves the comment as-is.
+    required: true
+    default: ""
+
 outputs: {}
 
 runs:

@@ -27,6 +27,7 @@ function inputs(overrides: Partial<Inputs> = {}): Inputs {
     escalationFallbackTeam: "",
     escalationTeamPrefix: "team-",
     codeownersPath: ".github/CODEOWNERS",
+    escalationCommentSuffix: "",
     actor: "dependabot[bot]",
     owner: "freckle",
     repo: "mergeabot-action",

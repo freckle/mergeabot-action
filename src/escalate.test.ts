@@ -31,6 +31,7 @@ function inputs(overrides: Partial<Inputs> = {}): Inputs {
     escalationFallbackTeam: "team-fallback",
     escalationTeamPrefix: "team-",
     codeownersPath: ".github/CODEOWNERS",
+    escalationCommentSuffix: "",
     actor: "dependabot[bot]",
     owner: "freckle",
     repo: "mergeabot-action",
@@ -101,6 +102,45 @@ describe("escalateFailingPrs / team routing", () => {
     const [number, body] = client.createComment.mock.calls[0];
     expect(number).toBe(7);
     expect(body).toContain(ESCALATION_MARKER);
+  });
+
+  it("appends the escalation-comment-suffix input to the comment", async () => {
+    const client = fakeClient({
+      searchBotPrStatuses: async () => [status({ number: 7 })],
+      getFileContent: async () => CODEOWNERS,
+      listPrFiles: async () => ["docs/intro.md"],
+    });
+
+    await escalateFailingPrs(
+      inputs({ escalationCommentSuffix: "cc @some-team" }),
+      client,
+    );
+
+    const [, body] = client.createComment.mock.calls[0];
+    expect(body).toContain("cc @some-team");
+  });
+
+  it("appends nothing when escalation-comment-suffix is empty", async () => {
+    const client = fakeClient({
+      searchBotPrStatuses: async () => [status({ number: 7 })],
+      getFileContent: async () => CODEOWNERS,
+      listPrFiles: async () => ["docs/intro.md"],
+    });
+
+    await escalateFailingPrs(inputs({ escalationCommentSuffix: "" }), client);
+
+    const [, body] = client.createComment.mock.calls[0];
+    expect(body).toBe(
+      [
+        ESCALATION_MARKER,
+        "This bot PR has failing statuses and cannot auto-merge. It has been re-assigned for human intervention.",
+        "",
+        "If you are the new reviewer, you should:",
+        "",
+        "- [ ] Check for failing statuses and address any (click the status link on this PR for details)",
+        "- [ ] Approve the PR",
+      ].join("\n"),
+    );
   });
 
   it("falls back when the files resolve to more than one team", async () => {
