@@ -10,14 +10,16 @@ import {
 import { ESCALATION_MARKER, hasEscalationComment } from "./predicates.js";
 import { buildEscalationSearchQuery } from "./search.js";
 
-function escalationCommentBody(): string {
-  return `${ESCALATION_MARKER}
+function escalationCommentBody(suffix: string): string {
+  const body = `${ESCALATION_MARKER}
 This bot PR has failing statuses and cannot auto-merge. It has been re-assigned for human intervention.
 
 If you are the new reviewer, you should:
 
 - [ ] Check for failing statuses and address any (click the status link on this PR for details)
 - [ ] Approve the PR`;
+
+  return suffix ? `${body}\n\n${suffix}` : body;
 }
 
 async function loadCodeowners(
@@ -89,7 +91,10 @@ export async function escalateFailingPrs(
 
       core.info(`  => Requesting review from ${team} and posting comment`);
       await client.requestReviewers(pr.number, [], [team]);
-      await client.createComment(pr.number, escalationCommentBody());
+      await client.createComment(
+        pr.number,
+        escalationCommentBody(inputs.escalationCommentSuffix),
+      );
     } catch (error: unknown) {
       // One PR's failure (e.g. a token lacking permission to request a team
       // reviewer) shouldn't abort the whole sweep -- keep going, but still

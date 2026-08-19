@@ -13,6 +13,7 @@ function raw(overrides: Partial<RawInputs> = {}): RawInputs {
     escalationFallbackTeam: "",
     escalationTeamPrefix: "team-",
     codeownersPath: ".github/CODEOWNERS",
+    escalationCommentSuffix: "",
     actor: "dependabot[bot]",
     repository: "freckle/mergeabot-action",
     token: "some-token",
@@ -88,5 +89,15 @@ describe("parseInputs", () => {
 
   it("parses quarantine-days as a number", () => {
     expect(parseInputs(raw({ quarantineDays: "-1" })).quarantineDays).toBe(-1);
+  });
+
+  it("passes escalation-comment-suffix through unchanged", () => {
+    expect(
+      parseInputs(raw({ escalationCommentSuffix: "cc @some-team" }))
+        .escalationCommentSuffix,
+    ).toBe("cc @some-team");
+    expect(
+      parseInputs(raw({ escalationCommentSuffix: "" })).escalationCommentSuffix,
+    ).toBe("");
   });
 });

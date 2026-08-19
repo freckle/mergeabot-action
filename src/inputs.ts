@@ -12,6 +12,7 @@ export interface Inputs {
   escalationFallbackTeam: string;
   escalationTeamPrefix: string;
   codeownersPath: string;
+  escalationCommentSuffix: string;
   actor: string;
   owner: string;
   repo: string;
@@ -29,6 +30,7 @@ export interface RawInputs {
   escalationFallbackTeam: string;
   escalationTeamPrefix: string;
   codeownersPath: string;
+  escalationCommentSuffix: string;
   actor: string;
   repository: string;
   token: string;
@@ -62,6 +64,7 @@ export function parseInputs(raw: RawInputs): Inputs {
     escalationFallbackTeam: raw.escalationFallbackTeam,
     escalationTeamPrefix: raw.escalationTeamPrefix,
     codeownersPath: raw.codeownersPath,
+    escalationCommentSuffix: raw.escalationCommentSuffix,
     actor: raw.actor,
     owner,
     repo,
@@ -87,6 +90,9 @@ export function getInputs(): Inputs {
       required: true,
     }),
     codeownersPath: core.getInput("codeowners-path", { required: true }),
+    // No { required: true }: this input's default is empty, which getInput
+    // would reject (as with exclude-title-regex).
+    escalationCommentSuffix: core.getInput("escalation-comment-suffix"),
     actor: core.getInput("github-actor", { required: true }),
     repository: core.getInput("github-repository", { required: true }),
     token: core.getInput("github-token", { required: true }),
