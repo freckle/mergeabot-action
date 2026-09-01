@@ -18,8 +18,8 @@ importers:
         specifier: ^6.0.0
         version: 6.0.0
       ignore:
-        specifier: ^7.0.6
-        version: 7.0.6
+        specifier: ^7.0.8
+        version: 7.0.8
     devDependencies:
       '@types/node':
         specifier: ^24.13.3
@@ -763,8 +763,8 @@ packages:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
     engines: {node: '>=8'}
 
-  ignore@7.0.6:
-    resolution: {integrity: sha512-BAg6QkE8W+TuQLrrw0Ugr7HegXduRuuj8/ti2kSOc+jz1dmx8/WNcjr6XGnq5YpDWxFwwaavqD0+jIUOKelTsw==}
+  ignore@7.0.8:
+    resolution: {integrity: sha512-YYNsSlXBjMk92SKnkwvB5LOVSa6OznlFUGcsvrFgNJbJCd0M1XKeFVRc8ZByeCqz32FivYNHJVooLmdqrmvp/Q==}
     engines: {node: '>= 4'}
 
   inflight@1.0.6:
@@ -1667,7 +1667,7 @@ snapshots:
 
   has-flag@4.0.0: {}
 
-  ignore@7.0.6: {}
+  ignore@7.0.8: {}
 
   inflight@1.0.6:
     dependencies:
@@ -1938,7 +1938,7 @@ snapshots:
   vite@8.1.5(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0):
     dependencies:
       lightningcss: 1.33.0
-      picomatch: 4.0.5
+      picomatch: 4.0.7
       postcss: 8.5.23
       rolldown: 1.1.5
       tinyglobby: 0.2.17
