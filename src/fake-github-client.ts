@@ -1,17 +1,15 @@
-import { vi, type Mock } from "vitest";
+import {vi, type Mock} from 'vitest'
 
-import type { GitHubClient } from "./client.js";
+import type {GitHubClient} from './client.js'
 
 export type MockedGitHubClient = {
-  [K in keyof GitHubClient]: Mock<GitHubClient[K]>;
-};
+  [K in keyof GitHubClient]: Mock<GitHubClient[K]>
+}
 
-export function fakeClient(
-  overrides: Partial<GitHubClient> = {},
-): MockedGitHubClient {
+export function fakeClient(overrides: Partial<GitHubClient> = {}): MockedGitHubClient {
   const defaults: GitHubClient = {
     listPrFiles: async () => [],
-    listRequestedReviewers: async () => ({ users: [], teams: [] }),
+    listRequestedReviewers: async () => ({users: [], teams: []}),
     removeRequestedReviewers: async () => undefined,
     requestReviewers: async () => undefined,
     createComment: async () => undefined,
@@ -20,9 +18,9 @@ export function fakeClient(
     searchBotPrStatuses: async () => [],
     getFileContent: async () => null,
     enableAutoMerge: async () => undefined,
-    approve: async () => undefined,
-  };
-  const merged = { ...defaults, ...overrides };
+    approve: async () => undefined
+  }
+  const merged = {...defaults, ...overrides}
 
   return {
     listPrFiles: vi.fn(merged.listPrFiles),
@@ -35,6 +33,6 @@ export function fakeClient(
     searchBotPrStatuses: vi.fn(merged.searchBotPrStatuses),
     getFileContent: vi.fn(merged.getFileContent),
     enableAutoMerge: vi.fn(merged.enableAutoMerge),
-    approve: vi.fn(merged.approve),
-  };
+    approve: vi.fn(merged.approve)
+  }
 }

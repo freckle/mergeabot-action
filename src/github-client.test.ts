@@ -1,392 +1,375 @@
-import { describe, expect, it } from "vitest";
+import {describe, expect, it} from 'vitest'
 
-import { createGitHubClient } from "./github-client.js";
+import {createGitHubClient} from './github-client.js'
 
 type Call = {
-  url: string;
-  method: string;
-  body: Record<string, unknown> | undefined;
-};
+  url: string
+  method: string
+  body: Record<string, unknown> | undefined
+}
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json" },
-  });
+    headers: {'content-type': 'application/json'}
+  })
 }
 
-function clientWithFetch(
-  handler: (call: Call) => Response | Promise<Response>,
-): { client: ReturnType<typeof createGitHubClient>; calls: Call[] } {
-  const calls: Call[] = [];
+function clientWithFetch(handler: (call: Call) => Response | Promise<Response>): {
+  client: ReturnType<typeof createGitHubClient>
+  calls: Call[]
+} {
+  const calls: Call[] = []
 
-  const fetch = async (
-    url: string,
-    init: RequestInit = {},
-  ): Promise<Response> => {
+  const fetch = async (url: string, init: RequestInit = {}): Promise<Response> => {
     const call: Call = {
       url,
-      method: init.method ?? "GET",
-      body: typeof init.body === "string" ? JSON.parse(init.body) : undefined,
-    };
-    calls.push(call);
-    return handler(call);
-  };
+      method: init.method ?? 'GET',
+      body: typeof init.body === 'string' ? JSON.parse(init.body) : undefined
+    }
+    calls.push(call)
+    return handler(call)
+  }
 
-  const client = createGitHubClient("token", "owner", "repo", {
-    request: { fetch },
-  });
+  const client = createGitHubClient('token', 'owner', 'repo', {
+    request: {fetch}
+  })
 
-  return { client, calls };
+  return {client, calls}
 }
 
-describe("createGitHubClient / searchQuarantinedPrs", () => {
-  it("paginates and maps GraphQL search results", async () => {
-    const { client, calls } = clientWithFetch((call) => {
-      const after = call.body?.variables as { after: string | null };
+describe('createGitHubClient / searchQuarantinedPrs', () => {
+  it('paginates and maps GraphQL search results', async () => {
+    const {client, calls} = clientWithFetch(call => {
+      const after = call.body?.variables as {after: string | null}
       if (after.after === null) {
         return jsonResponse({
           data: {
             search: {
               nodes: [
                 {
-                  id: "PR_1",
+                  id: 'PR_1',
                   number: 1,
-                  title: "Bump foo",
-                  createdAt: "2024-01-01T00:00:00Z",
-                  reviewDecision: "APPROVED",
-                },
+                  title: 'Bump foo',
+                  createdAt: '2024-01-01T00:00:00Z',
+                  reviewDecision: 'APPROVED'
+                }
               ],
-              pageInfo: { hasNextPage: true, endCursor: "cursor-1" },
-            },
-          },
-        });
+              pageInfo: {hasNextPage: true, endCursor: 'cursor-1'}
+            }
+          }
+        })
       }
       return jsonResponse({
         data: {
           search: {
             nodes: [
               {
-                id: "PR_2",
+                id: 'PR_2',
                 number: 2,
-                title: "Bump bar",
-                createdAt: "2024-01-02T00:00:00Z",
-                reviewDecision: null,
-              },
+                title: 'Bump bar',
+                createdAt: '2024-01-02T00:00:00Z',
+                reviewDecision: null
+              }
             ],
-            pageInfo: { hasNextPage: false, endCursor: null },
-          },
-        },
-      });
-    });
+            pageInfo: {hasNextPage: false, endCursor: null}
+          }
+        }
+      })
+    })
 
-    const prs = await client.searchQuarantinedPrs("author:app/dependabot");
+    const prs = await client.searchQuarantinedPrs('author:app/dependabot')
 
     expect(prs).toEqual([
       {
-        id: "PR_1",
+        id: 'PR_1',
         number: 1,
-        title: "Bump foo",
-        createdAt: "2024-01-01T00:00:00Z",
-        reviewDecision: "APPROVED",
+        title: 'Bump foo',
+        createdAt: '2024-01-01T00:00:00Z',
+        reviewDecision: 'APPROVED'
       },
       {
-        id: "PR_2",
+        id: 'PR_2',
         number: 2,
-        title: "Bump bar",
-        createdAt: "2024-01-02T00:00:00Z",
-        reviewDecision: null,
-      },
-    ]);
-    expect(calls).toHaveLength(2);
+        title: 'Bump bar',
+        createdAt: '2024-01-02T00:00:00Z',
+        reviewDecision: null
+      }
+    ])
+    expect(calls).toHaveLength(2)
     expect(calls[1].body?.variables).toEqual({
-      searchQuery: "author:app/dependabot",
-      after: "cursor-1",
-    });
-  });
+      searchQuery: 'author:app/dependabot',
+      after: 'cursor-1'
+    })
+  })
 
-  it("stops paginating once 1000 results have been collected", async () => {
-    const page = Array.from({ length: 100 }, (_, i) => ({
+  it('stops paginating once 1000 results have been collected', async () => {
+    const page = Array.from({length: 100}, (_, i) => ({
       id: `PR_${i}`,
       number: i,
-      title: "Bump foo",
-      createdAt: "2024-01-01T00:00:00Z",
-      reviewDecision: null,
-    }));
+      title: 'Bump foo',
+      createdAt: '2024-01-01T00:00:00Z',
+      reviewDecision: null
+    }))
 
-    const { client, calls } = clientWithFetch(() =>
+    const {client, calls} = clientWithFetch(() =>
       jsonResponse({
         data: {
           search: {
             nodes: page,
-            pageInfo: { hasNextPage: true, endCursor: "next" },
-          },
-        },
-      }),
-    );
+            pageInfo: {hasNextPage: true, endCursor: 'next'}
+          }
+        }
+      })
+    )
 
-    const prs = await client.searchQuarantinedPrs("author:app/dependabot");
+    const prs = await client.searchQuarantinedPrs('author:app/dependabot')
 
-    expect(prs).toHaveLength(1000);
-    expect(calls).toHaveLength(10);
-  });
-});
+    expect(prs).toHaveLength(1000)
+    expect(calls).toHaveLength(10)
+  })
+})
 
-describe("createGitHubClient / searchBotPrStatuses", () => {
-  function statusNode(
-    number: number,
-    totalCount: number,
-    state: string | null,
-  ): unknown {
+describe('createGitHubClient / searchBotPrStatuses', () => {
+  function statusNode(number: number, totalCount: number, state: string | null): unknown {
     return {
       number,
-      reviewRequests: { totalCount },
+      reviewRequests: {totalCount},
       commits: {
-        nodes: [{ commit: { statusCheckRollup: state && { state } } }],
-      },
-    };
+        nodes: [{commit: {statusCheckRollup: state && {state}}}]
+      }
+    }
   }
 
-  it("paginates and maps GraphQL search results", async () => {
-    const { client, calls } = clientWithFetch((call) => {
-      const { after } = call.body?.variables as { after: string | null };
+  it('paginates and maps GraphQL search results', async () => {
+    const {client, calls} = clientWithFetch(call => {
+      const {after} = call.body?.variables as {after: string | null}
       if (after === null) {
         return jsonResponse({
           data: {
             search: {
-              nodes: [statusNode(1, 0, "FAILURE")],
-              pageInfo: { hasNextPage: true, endCursor: "cursor-1" },
-            },
-          },
-        });
+              nodes: [statusNode(1, 0, 'FAILURE')],
+              pageInfo: {hasNextPage: true, endCursor: 'cursor-1'}
+            }
+          }
+        })
       }
       return jsonResponse({
         data: {
           search: {
-            nodes: [statusNode(2, 1, "SUCCESS")],
-            pageInfo: { hasNextPage: false, endCursor: null },
-          },
-        },
-      });
-    });
+            nodes: [statusNode(2, 1, 'SUCCESS')],
+            pageInfo: {hasNextPage: false, endCursor: null}
+          }
+        }
+      })
+    })
 
-    const prs = await client.searchBotPrStatuses("author:app/dependabot");
+    const prs = await client.searchBotPrStatuses('author:app/dependabot')
 
     expect(prs).toEqual([
-      { number: 1, hasReviewRequest: false, hasFailingStatus: true },
-      { number: 2, hasReviewRequest: true, hasFailingStatus: false },
-    ]);
-    expect(calls).toHaveLength(2);
+      {number: 1, hasReviewRequest: false, hasFailingStatus: true},
+      {number: 2, hasReviewRequest: true, hasFailingStatus: false}
+    ])
+    expect(calls).toHaveLength(2)
     expect(calls[1].body?.variables).toEqual({
-      searchQuery: "author:app/dependabot",
-      after: "cursor-1",
-    });
-  });
+      searchQuery: 'author:app/dependabot',
+      after: 'cursor-1'
+    })
+  })
 
   it.each([
-    ["ERROR", true],
-    ["FAILURE", true],
-    ["SUCCESS", false],
-    ["PENDING", false],
-    ["EXPECTED", false],
-    [null, false],
-  ])("rollup state %s -> hasFailingStatus %s", async (state, expected) => {
-    const { client } = clientWithFetch(() =>
+    ['ERROR', true],
+    ['FAILURE', true],
+    ['SUCCESS', false],
+    ['PENDING', false],
+    ['EXPECTED', false],
+    [null, false]
+  ])('rollup state %s -> hasFailingStatus %s', async (state, expected) => {
+    const {client} = clientWithFetch(() =>
       jsonResponse({
         data: {
           search: {
             nodes: [statusNode(1, 0, state)],
-            pageInfo: { hasNextPage: false, endCursor: null },
-          },
-        },
-      }),
-    );
+            pageInfo: {hasNextPage: false, endCursor: null}
+          }
+        }
+      })
+    )
 
-    const prs = await client.searchBotPrStatuses("author:app/dependabot");
+    const prs = await client.searchBotPrStatuses('author:app/dependabot')
 
-    expect(prs[0].hasFailingStatus).toBe(expected);
-  });
+    expect(prs[0].hasFailingStatus).toBe(expected)
+  })
 
-  it("treats a PR with no commits as not failing", async () => {
-    const { client } = clientWithFetch(() =>
+  it('treats a PR with no commits as not failing', async () => {
+    const {client} = clientWithFetch(() =>
       jsonResponse({
         data: {
           search: {
             nodes: [
               {
                 number: 1,
-                reviewRequests: { totalCount: 0 },
-                commits: { nodes: [] },
-              },
+                reviewRequests: {totalCount: 0},
+                commits: {nodes: []}
+              }
             ],
-            pageInfo: { hasNextPage: false, endCursor: null },
-          },
-        },
-      }),
-    );
+            pageInfo: {hasNextPage: false, endCursor: null}
+          }
+        }
+      })
+    )
 
-    expect(await client.searchBotPrStatuses("author:app/dependabot")).toEqual([
-      { number: 1, hasReviewRequest: false, hasFailingStatus: false },
-    ]);
-  });
-});
+    expect(await client.searchBotPrStatuses('author:app/dependabot')).toEqual([
+      {number: 1, hasReviewRequest: false, hasFailingStatus: false}
+    ])
+  })
+})
 
-describe("createGitHubClient / getFileContent", () => {
-  it("returns the raw file content", async () => {
-    const { client, calls } = clientWithFetch(
+describe('createGitHubClient / getFileContent', () => {
+  it('returns the raw file content', async () => {
+    const {client, calls} = clientWithFetch(
       () =>
-        new Response("* @freckle/team-platform", {
+        new Response('* @freckle/team-platform', {
           status: 200,
-          headers: { "content-type": "text/plain" },
-        }),
-    );
+          headers: {'content-type': 'text/plain'}
+        })
+    )
 
-    expect(await client.getFileContent(".github/CODEOWNERS")).toBe(
-      "* @freckle/team-platform",
-    );
+    expect(await client.getFileContent('.github/CODEOWNERS')).toBe('* @freckle/team-platform')
     // octokit percent-encodes the path parameter, which the contents endpoint
     // accepts.
-    expect(calls[0].url).toContain(
-      "/repos/owner/repo/contents/.github%2FCODEOWNERS",
-    );
-  });
+    expect(calls[0].url).toContain('/repos/owner/repo/contents/.github%2FCODEOWNERS')
+  })
 
-  it("returns null when the file does not exist", async () => {
-    const { client } = clientWithFetch(() =>
-      jsonResponse({ message: "Not Found" }, 404),
-    );
+  it('returns null when the file does not exist', async () => {
+    const {client} = clientWithFetch(() => jsonResponse({message: 'Not Found'}, 404))
 
-    expect(await client.getFileContent(".github/CODEOWNERS")).toBeNull();
-  });
-});
+    expect(await client.getFileContent('.github/CODEOWNERS')).toBeNull()
+  })
+})
 
-describe("createGitHubClient / enableAutoMerge", () => {
+describe('createGitHubClient / enableAutoMerge', () => {
   it.each([
-    ["merge", "MERGE"],
-    ["rebase", "REBASE"],
-    ["squash", "SQUASH"],
-  ] as const)(
-    "maps strategy %s to merge method %s",
-    async (strategy, mergeMethod) => {
-      const { client, calls } = clientWithFetch(() =>
-        jsonResponse({
-          data: { enablePullRequestAutoMerge: { clientMutationId: null } },
-        }),
-      );
-
-      await client.enableAutoMerge("PR_id", strategy);
-
-      expect(calls[0].body?.variables).toEqual({
-        pullRequestId: "PR_id",
-        mergeMethod,
-      });
-    },
-  );
-});
-
-describe("createGitHubClient / REST-backed methods", () => {
-  it("maps requested reviewers by login and team slug", async () => {
-    const { client } = clientWithFetch(() =>
+    ['merge', 'MERGE'],
+    ['rebase', 'REBASE'],
+    ['squash', 'SQUASH']
+  ] as const)('maps strategy %s to merge method %s', async (strategy, mergeMethod) => {
+    const {client, calls} = clientWithFetch(() =>
       jsonResponse({
-        users: [{ login: "alice" }],
-        teams: [{ slug: "team-a" }],
-      }),
-    );
+        data: {enablePullRequestAutoMerge: {clientMutationId: null}}
+      })
+    )
+
+    await client.enableAutoMerge('PR_id', strategy)
+
+    expect(calls[0].body?.variables).toEqual({
+      pullRequestId: 'PR_id',
+      mergeMethod
+    })
+  })
+})
+
+describe('createGitHubClient / REST-backed methods', () => {
+  it('maps requested reviewers by login and team slug', async () => {
+    const {client} = clientWithFetch(() =>
+      jsonResponse({
+        users: [{login: 'alice'}],
+        teams: [{slug: 'team-a'}]
+      })
+    )
 
     expect(await client.listRequestedReviewers(1)).toEqual({
-      users: ["alice"],
-      teams: ["team-a"],
-    });
-  });
+      users: ['alice'],
+      teams: ['team-a']
+    })
+  })
 
-  it("paginates listPrFiles by filename", async () => {
-    const { client, calls } = clientWithFetch((call) => {
-      const linkedFirstPage = !call.url.includes("page=2");
+  it('paginates listPrFiles by filename', async () => {
+    const {client, calls} = clientWithFetch(call => {
+      const linkedFirstPage = !call.url.includes('page=2')
       const headers = linkedFirstPage
         ? {
-            link: '<https://api.github.com/repos/owner/repo/pulls/1/files?page=2>; rel="next"',
+            link: '<https://api.github.com/repos/owner/repo/pulls/1/files?page=2>; rel="next"'
           }
-        : {};
-      const body = linkedFirstPage
-        ? [{ filename: "a.json" }]
-        : [{ filename: "b.json" }];
+        : {}
+      const body = linkedFirstPage ? [{filename: 'a.json'}] : [{filename: 'b.json'}]
       return new Response(JSON.stringify(body), {
         status: 200,
-        headers: { "content-type": "application/json", ...headers },
-      });
-    });
+        headers: {'content-type': 'application/json', ...headers}
+      })
+    })
 
-    const files = await client.listPrFiles(1);
+    const files = await client.listPrFiles(1)
 
-    expect(files).toEqual(["a.json", "b.json"]);
-    expect(calls).toHaveLength(2);
-  });
+    expect(files).toEqual(['a.json', 'b.json'])
+    expect(calls).toHaveLength(2)
+  })
 
-  it("approves a PR via a review event", async () => {
-    const { client, calls } = clientWithFetch(() => jsonResponse({}));
+  it('approves a PR via a review event', async () => {
+    const {client, calls} = clientWithFetch(() => jsonResponse({}))
 
-    await client.approve(42);
-
-    expect(calls[0]).toMatchObject({
-      method: "POST",
-      url: expect.stringContaining("/pulls/42/reviews"),
-      body: { event: "APPROVE" },
-    });
-  });
-
-  it("removes requested reviewers by login and team slug", async () => {
-    const { client, calls } = clientWithFetch(() => jsonResponse({}));
-
-    await client.removeRequestedReviewers(1, ["alice"], ["team-a"]);
+    await client.approve(42)
 
     expect(calls[0]).toMatchObject({
-      method: "DELETE",
-      body: { reviewers: ["alice"], team_reviewers: ["team-a"] },
-    });
-  });
+      method: 'POST',
+      url: expect.stringContaining('/pulls/42/reviews'),
+      body: {event: 'APPROVE'}
+    })
+  })
 
-  it("requests reviewers by login and team slug", async () => {
-    const { client, calls } = clientWithFetch(() => jsonResponse({}));
+  it('removes requested reviewers by login and team slug', async () => {
+    const {client, calls} = clientWithFetch(() => jsonResponse({}))
 
-    await client.requestReviewers(1, [], ["team-a"]);
+    await client.removeRequestedReviewers(1, ['alice'], ['team-a'])
 
     expect(calls[0]).toMatchObject({
-      method: "POST",
-      url: expect.stringContaining("/pulls/1/requested_reviewers"),
-      body: { reviewers: [], team_reviewers: ["team-a"] },
-    });
-  });
+      method: 'DELETE',
+      body: {reviewers: ['alice'], team_reviewers: ['team-a']}
+    })
+  })
 
-  it("paginates listCommentBodies by body", async () => {
-    const { client, calls } = clientWithFetch((call) => {
-      const linkedFirstPage = !call.url.includes("page=2");
+  it('requests reviewers by login and team slug', async () => {
+    const {client, calls} = clientWithFetch(() => jsonResponse({}))
+
+    await client.requestReviewers(1, [], ['team-a'])
+
+    expect(calls[0]).toMatchObject({
+      method: 'POST',
+      url: expect.stringContaining('/pulls/1/requested_reviewers'),
+      body: {reviewers: [], team_reviewers: ['team-a']}
+    })
+  })
+
+  it('paginates listCommentBodies by body', async () => {
+    const {client, calls} = clientWithFetch(call => {
+      const linkedFirstPage = !call.url.includes('page=2')
       const headers = linkedFirstPage
         ? {
-            link: '<https://api.github.com/repos/owner/repo/issues/1/comments?page=2>; rel="next"',
+            link: '<https://api.github.com/repos/owner/repo/issues/1/comments?page=2>; rel="next"'
           }
-        : {};
-      const body = linkedFirstPage ? [{ body: "first" }] : [{ body: null }];
+        : {}
+      const body = linkedFirstPage ? [{body: 'first'}] : [{body: null}]
       return new Response(JSON.stringify(body), {
         status: 200,
-        headers: { "content-type": "application/json", ...headers },
-      });
-    });
+        headers: {'content-type': 'application/json', ...headers}
+      })
+    })
 
-    const bodies = await client.listCommentBodies(1);
+    const bodies = await client.listCommentBodies(1)
 
-    expect(bodies).toEqual(["first", ""]);
-    expect(calls).toHaveLength(2);
-  });
+    expect(bodies).toEqual(['first', ''])
+    expect(calls).toHaveLength(2)
+  })
 
-  it("creates a comment with the given body", async () => {
-    const { client, calls } = clientWithFetch(() => jsonResponse({}));
+  it('creates a comment with the given body', async () => {
+    const {client, calls} = clientWithFetch(() => jsonResponse({}))
 
-    await client.createComment(1, "hello");
+    await client.createComment(1, 'hello')
 
     expect(calls[0]).toMatchObject({
-      method: "POST",
-      url: expect.stringContaining("/issues/1/comments"),
-      body: { body: "hello" },
-    });
-  });
-});
+      method: 'POST',
+      url: expect.stringContaining('/issues/1/comments'),
+      body: {body: 'hello'}
+    })
+  })
+})

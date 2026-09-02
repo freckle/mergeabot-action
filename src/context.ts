@@ -1,10 +1,10 @@
-import * as github from "@actions/github";
+import * as github from '@actions/github'
 
 export interface EventContext {
-  eventName: string;
-  prAction: string | undefined;
-  prNumber: number | undefined;
-  prTitle: string | undefined;
+  eventName: string
+  prAction: string | undefined
+  prNumber: number | undefined
+  prTitle: string | undefined
 }
 
 export function getContext(): EventContext {
@@ -12,6 +12,6 @@ export function getContext(): EventContext {
     eventName: github.context.eventName,
     prAction: github.context.payload.action,
     prNumber: github.context.payload.number,
-    prTitle: github.context.payload.pull_request?.title,
-  };
+    prTitle: github.context.payload.pull_request?.title
+  }
 }

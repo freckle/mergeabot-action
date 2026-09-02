@@ -25,9 +25,11 @@ jobs:
 
       - id: release
         uses: cycjimmy/semantic-release-action@v6.0.0
+        # conventional-changelog-conventionalcommits is held at 9.x: v10 needs
+        # conventional-changelog-writer@9, which semantic-release@25 does not ship.
         with:
           extra_plugins: |
-            conventional-changelog-conventionalcommits@8.0.0
+            conventional-changelog-conventionalcommits@9
             @semantic-release/exec
             semantic-release-major-tag
         env:

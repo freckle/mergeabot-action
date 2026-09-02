@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "outDir": "./lib",
     "rootDir": "./src",
@@ -9,14 +10,13 @@
     "esModuleInterop": true,
     "strict": true,
     "isolatedModules": true,
-    "skipLibCheck": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "noEmitOnError": true,
     "removeComments": true,
-    "types": ["node"]
+    "types": ["node", "vitest/globals"]
   },
   "include": ["./src/**/*"]
 }
