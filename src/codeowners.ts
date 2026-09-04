@@ -59,11 +59,11 @@ export function parseCodeowners(
   return rules.reverse();
 }
 
-export function resolveTeamForPaths(
+export function resolveTeamsForPaths(
   rules: CodeownersRule[],
   paths: string[],
   fallbackTeam: string,
-): string {
+): string[] {
   const teams = new Set<string>();
 
   for (const path of paths) {
@@ -73,7 +73,11 @@ export function resolveTeamForPaths(
     }
   }
 
-  // Unowned paths contribute nothing, so they don't force a fallback on their
-  // own; only zero or conflicting teams do.
-  return teams.size === 1 ? [...teams][0] : fallbackTeam;
+  // Unowned paths contribute nothing, so they don't force a fallback on
+  // their own; only a zero-team match does. A PR spanning multiple teams'
+  // paths is routed to all of them, not the fallback.
+  if (teams.size === 0) {
+    return fallbackTeam !== "" ? [fallbackTeam] : [];
+  }
+  return [...teams];
 }
