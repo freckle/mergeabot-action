@@ -14,7 +14,7 @@ function resolve(content: string, paths: string[], fallback = "fallback") {
   return teams[0];
 }
 
-describe("parseCodeowners", () => {
+describe(parseCodeowners.name, () => {
   it("skips comments and blank lines", () => {
     const rules = parseCodeowners(
       [
