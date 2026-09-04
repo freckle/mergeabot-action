@@ -2,6 +2,11 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches: main
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -19,8 +24,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run format-check
       - run: pnpm run typecheck
+      - run: pnpm run lint
       - run: pnpm run knip
-      - run: pnpm test
+      - run: pnpm run coverage
       - run: pnpm run build
 
       - uses: actions/upload-artifact@v7
