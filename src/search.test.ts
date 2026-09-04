@@ -2,7 +2,7 @@ import {describe, expect, it} from 'vitest'
 
 import {buildEscalationSearchQuery, buildSearchQuery} from './search.js'
 
-describe('buildSearchQuery', () => {
+describe(buildSearchQuery.name, () => {
   it('maps a [bot]-suffixed login to its app/ author form', () => {
     const query = buildSearchQuery('freckle', 'mergeabot-action', ['dependabot[bot]'], '2024-01-01')
     expect(query).toBe(
@@ -32,7 +32,7 @@ describe('buildSearchQuery', () => {
   })
 })
 
-describe('buildEscalationSearchQuery', () => {
+describe(buildEscalationSearchQuery.name, () => {
   it('maps a [bot]-suffixed login to its app/ author form', () => {
     const query = buildEscalationSearchQuery('freckle', 'mergeabot-action', ['dependabot[bot]'])
     expect(query).toBe('repo:freckle/mergeabot-action is:pr is:open author:app/dependabot')

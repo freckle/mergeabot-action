@@ -8,7 +8,7 @@ import {
   touchesWorkflows
 } from './predicates.js'
 
-describe('isBotPrEvent', () => {
+describe(isBotPrEvent.name, () => {
   const botAuthors = ['dependabot[bot]', 'renovate[bot]']
 
   it.each([
@@ -21,7 +21,7 @@ describe('isBotPrEvent', () => {
   })
 })
 
-describe('isExcludedByTitle', () => {
+describe(isExcludedByTitle.name, () => {
   it.each([
     ['Bump foo in /qa', null, false],
     ['Bump foo in /qa', /in \/qa$/, true],
@@ -31,7 +31,7 @@ describe('isExcludedByTitle', () => {
   })
 })
 
-describe('touchesWorkflows', () => {
+describe(touchesWorkflows.name, () => {
   it.each([
     [['package.json', '.github/workflows/ci.yml'], true],
     [['package.json', '.github/CODEOWNERS'], false],
@@ -41,7 +41,7 @@ describe('touchesWorkflows', () => {
   })
 })
 
-describe('hasEscalationComment', () => {
+describe(hasEscalationComment.name, () => {
   it.each([
     [[], false],
     [['Bump foo', 'LGTM'], false],
