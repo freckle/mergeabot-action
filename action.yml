@@ -65,8 +65,9 @@ inputs:
 
   escalation-fallback-team:
     description: |
-      Team slug to request when CODEOWNERS resolves to no team, or to more than
-      one (a PR spanning multiple teams). When empty, such PRs are skipped.
+      Team slug to request when CODEOWNERS resolves to no team. When empty,
+      such PRs are skipped. A PR spanning multiple teams' paths is routed to
+      all of those teams instead of this fallback.
     required: true
     default: ""
 

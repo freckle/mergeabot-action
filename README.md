@@ -115,7 +115,7 @@ jobs:
 | `github-token`              | <p>Override GitHub token, if necessary</p>                                                                                                                                                                                                                                                                 | `true`   | `${{ github.token }}`            |
 | `dry-run`                   | <p>Set to true to print, but not perform, any actions</p>                                                                                                                                                                                                                                                  | `true`   | `false`                          |
 | `escalate`                  | <p>On scheduled runs, request a team reviewer (and leave a triage comment) on bot PRs that have failing statuses and no reviewer, so they don't sit unmerged and unnoticed. Off by default. Requires a token that can request team reviewers (e.g. a GitHub App token, not the default Actions token).</p> | `true`   | `false`                          |
-| `escalation-fallback-team`  | <p>Team slug to request when CODEOWNERS resolves to no team, or to more than one (a PR spanning multiple teams). When empty, such PRs are skipped.</p>                                                                                                                                                     | `true`   | `""`                             |
+| `escalation-fallback-team`  | <p>Team slug to request when CODEOWNERS resolves to no team. When empty, such PRs are skipped. A PR spanning multiple teams' paths is routed to all of those teams instead of this fallback.</p>                                                                                                           | `true`   | `""`                             |
 | `escalation-team-prefix`    | <p>Only CODEOWNERS owners of the form @org/<prefix>* are treated as routable teams (others, e.g. individuals, are ignored for routing).</p>                                                                                                                                                                | `true`   | `team-`                          |
 | `codeowners-path`           | <p>Path to the CODEOWNERS file used for escalation routing</p>                                                                                                                                                                                                                                             | `true`   | `.github/CODEOWNERS`             |
 | `escalation-comment-suffix` | <p>Arbitrary text appended to the escalation comment. Empty by default, which leaves the comment as-is.</p>                                                                                                                                                                                                | `true`   | `""`                             |
@@ -154,7 +154,8 @@ jobs:
 - `escalate`: on scheduled runs, request a team reviewer on failing bot PRs that
   have no reviewer (see [Escalation](#escalation)). Default is `false`.
 - `escalation-fallback-team`: team slug to request when CODEOWNERS resolves to
-  no team, or to more than one. Empty (the default) skips such PRs.
+  no team. Empty (the default) skips such PRs. A PR spanning multiple teams'
+  paths is routed to all of those teams instead of this fallback.
 - `escalation-team-prefix`: only CODEOWNERS owners of the form `@org/<prefix>*`
   are treated as routable teams. Default is `team-`.
 - `codeowners-path`: CODEOWNERS file used for escalation routing. Default is
@@ -170,9 +171,10 @@ of that convention: on scheduled runs it finds bot PRs that have **failing
 statuses** (so they can never auto-merge) and **no reviewer**, requests the
 owning team as reviewer, and leaves a one-time triage comment.
 
-The owning team is resolved from `CODEOWNERS` against the PR's changed files
-(last match wins, gitignore-style globbing). Only `@org/<prefix>*` owners count
-as teams; a PR spanning multiple teams (or matching none) routes to
+The owning team(s) are resolved from `CODEOWNERS` against the PR's changed
+files (last match wins, gitignore-style globbing). Only `@org/<prefix>*`
+owners count as teams; a PR spanning multiple teams' paths requests all of
+them as reviewers, and one matching no team routes to
 `escalation-fallback-team`. Comments are idempotent (re-runs are no-ops).
 
 `escalation-comment-suffix` appends its text as a new paragraph at the end of
