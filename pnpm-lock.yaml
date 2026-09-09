@@ -119,8 +119,8 @@ importers:
         specifier: ^6.0.0
         version: 6.0.0
       ignore:
-        specifier: ^7.0.8
-        version: 7.0.8
+        specifier: ^7.0.9
+        version: 7.0.9
     devDependencies:
       '@types/node':
         specifier: ^24.13.3
@@ -850,8 +850,8 @@ packages:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
     engines: {node: '>=8'}
 
-  ignore@7.0.8:
-    resolution: {integrity: sha512-YYNsSlXBjMk92SKnkwvB5LOVSa6OznlFUGcsvrFgNJbJCd0M1XKeFVRc8ZByeCqz32FivYNHJVooLmdqrmvp/Q==}
+  ignore@7.0.9:
+    resolution: {integrity: sha512-brTTsvFRt5C1gGHtPst/281UjPD5t9fBqbgoMPlVWy11ZLTPfu7HxK4ZYqO9H7o/yC9rSTCI85EaQ4OoY12qYw==}
     engines: {node: '>= 4'}
 
   inflight@1.0.6:
@@ -1713,7 +1713,7 @@ snapshots:
 
   has-flag@4.0.0: {}
 
-  ignore@7.0.8: {}
+  ignore@7.0.9: {}
 
   inflight@1.0.6:
     dependencies:
