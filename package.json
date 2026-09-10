@@ -31,7 +31,7 @@
     "ignore": "^7.0.9"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.13.4",
     "@vercel/ncc": "^0.45.0",
     "action-docs": "^2.5.1",
     "knip": "^6.34.0",
