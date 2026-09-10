@@ -20,7 +20,14 @@ jobs:
         with:
           persist-credentials: false
 
+      # @semantic-release/exec runs `pnpm install && pnpm run build` as its
+      # prepareCmd, so the pnpm store cache and the .nvmrc Node version have to
+      # be set up before semantic-release runs, not inside its own container.
       - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          cache: pnpm
+          node-version-file: ".nvmrc"
 
       - id: token
         uses: actions/create-github-app-token@v3
