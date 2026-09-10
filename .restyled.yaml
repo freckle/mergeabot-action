@@ -1,3 +1,4 @@
 # dist/ is a generated bundle
 also_exclude:
   - "dist/**/*"
+
