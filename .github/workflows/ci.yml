@@ -2,6 +2,11 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches: main
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -19,8 +24,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run format-check
       - run: pnpm run typecheck
+      - run: pnpm run lint
       - run: pnpm run knip
-      - run: pnpm test
+      - run: pnpm run coverage
       - run: pnpm run build
 
       - uses: actions/upload-artifact@v7
@@ -31,6 +37,13 @@ jobs:
   integration:
     needs: test
     runs-on: ubuntu-latest
+    # This job runs the action against this very repository with dry-run: false,
+    # so it needs the same writes .github/workflows/mergeabot.yml grants, plus
+    # issues: write for the quarantine comment (PR comments are issue comments).
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v7
 

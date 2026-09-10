@@ -219,8 +219,9 @@ This is a TypeScript Action. After changing anything in `src/`:
 
 ```console
 pnpm install
-pnpm test
-pnpm run build   # rebuilds dist/index.js, which must be committed
+pnpm run lint
+pnpm run coverage   # tests plus the coverage gate CI enforces
+pnpm run build      # rebuilds dist/index.js, which must be committed
 ```
 
 After changing anything in [`action.yml`](./action.yml), run `pnpm run readme`
