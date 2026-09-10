@@ -302,7 +302,9 @@ describe("createGitHubClient / REST-backed methods", () => {
   it("paginates listPrFiles by filename", async () => {
     const { client, calls } = clientWithFetch((call) => {
       const linkedFirstPage = !call.url.includes("page=2");
-      const headers = linkedFirstPage
+      // Record<string, string> so the branch without `link` still satisfies
+      // HeadersInit; TypeScript 6 otherwise infers `link?: undefined` here.
+      const headers: Record<string, string> = linkedFirstPage
         ? {
             link: '<https://api.github.com/repos/owner/repo/pulls/1/files?page=2>; rel="next"',
           }
@@ -360,7 +362,9 @@ describe("createGitHubClient / REST-backed methods", () => {
   it("paginates listCommentBodies by body", async () => {
     const { client, calls } = clientWithFetch((call) => {
       const linkedFirstPage = !call.url.includes("page=2");
-      const headers = linkedFirstPage
+      // Record<string, string> so the branch without `link` still satisfies
+      // HeadersInit; TypeScript 6 otherwise infers `link?: undefined` here.
+      const headers: Record<string, string> = linkedFirstPage
         ? {
             link: '<https://api.github.com/repos/owner/repo/issues/1/comments?page=2>; rel="next"',
           }
