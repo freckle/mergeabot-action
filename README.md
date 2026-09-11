@@ -35,7 +35,7 @@ We recommend running this once a day, e.g. at midnight UTC, through the
 ```yaml
 on:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: '0 0 * * *'
 ```
 
 ### `pull_request`
@@ -49,7 +49,7 @@ To ameliorate this, we run Mergeabot on `pull_request` events too:
 ```yaml
 on:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: '0 0 * * *'
 
   pull_request:
     types: [opened]
@@ -83,7 +83,7 @@ name: Mergeabot
 
 on:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: '0 0 * * *'
 
   pull_request:
     types: [opened]
@@ -183,7 +183,7 @@ comment-driven automation.
 ```yaml
 on:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: '0 0 * * *'
 
 jobs:
   mergeabot:
@@ -196,7 +196,7 @@ jobs:
             renovate[bot]
           escalate: true
           escalation-fallback-team: team-platform
-          escalation-comment-suffix: "cc @your-team-here"
+          escalation-comment-suffix: 'cc @your-team-here'
           # github.token usually can't request team reviewers; pass an App token
           github-token: ${{ steps.app-token.outputs.token }}
 ```
