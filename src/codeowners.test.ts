@@ -6,7 +6,7 @@ function resolve(content: string, paths: string[], fallback = 'fallback') {
   return resolveTeamForPaths(parseCodeowners(content, 'team-'), paths, fallback)
 }
 
-describe('parseCodeowners', () => {
+describe(parseCodeowners.name, () => {
   it('skips comments and blank lines', () => {
     const rules = parseCodeowners(
       [

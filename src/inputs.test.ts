@@ -22,7 +22,7 @@ function raw(overrides: Partial<RawInputs> = {}): RawInputs {
   }
 }
 
-describe('parseInputs', () => {
+describe(parseInputs.name, () => {
   it('accepts merge, rebase, and squash strategies', () => {
     for (const strategy of ['merge', 'rebase', 'squash'] as const) {
       expect(parseInputs(raw({strategy})).strategy).toBe(strategy)
