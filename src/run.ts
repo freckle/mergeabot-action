@@ -125,6 +125,14 @@ async function scanForQuarantinedPrs(
       continue
     }
 
+    if (pr.mergeStateStatus == 'CLEAN') {
+      core.info(`Merging PR ${chalk.gray('(requirements already met)')}`)
+      await unlessDryRun(inputs, async () => {
+        await client.merge(pr.id, inputs.strategy)
+      })
+      continue
+    }
+
     switch (pr.reviewDecision) {
       case 'CHANGES_REQUESTED':
         core.warning('Skipping PR because changes have been requested')
@@ -133,25 +141,15 @@ async function scanForQuarantinedPrs(
       case 'APPROVED':
         core.info(`Enable auto-merge ${chalk.gray('(PR already approved)')}`)
         await unlessDryRun(inputs, async () => {
-          if (pr.mergeStateStatus == 'CLEAN') {
-            core.info('Pull request is in clean status, merging directly')
-            await client.merge(pr.id, inputs.strategy)
-          } else {
-            await client.enableAutoMerge(pr.id, inputs.strategy)
-          }
+          await client.enableAutoMerge(pr.id, inputs.strategy)
         })
         break
 
       default:
         core.info('Enable auto-merge and approve')
         await unlessDryRun(inputs, async () => {
-          if (pr.mergeStateStatus == 'CLEAN') {
-            core.info('Pull request is in clean status, merging directly')
-            await client.merge(pr.id, inputs.strategy)
-          } else {
-            await client.enableAutoMerge(pr.id, inputs.strategy)
-            await client.approve(pr.number)
-          }
+          await client.enableAutoMerge(pr.id, inputs.strategy)
+          await client.approve(pr.number)
         })
         break
     }
