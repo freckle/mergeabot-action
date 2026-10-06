@@ -17,6 +17,7 @@ export function fakeClient(overrides: Partial<GitHubClient> = {}): MockedGitHubC
     searchQuarantinedPrs: async () => [],
     searchBotPrStatuses: async () => [],
     getFileContent: async () => null,
+    merge: async () => undefined,
     enableAutoMerge: async () => undefined,
     approve: async () => undefined
   }
@@ -32,6 +33,7 @@ export function fakeClient(overrides: Partial<GitHubClient> = {}): MockedGitHubC
     searchQuarantinedPrs: vi.fn(merged.searchQuarantinedPrs),
     searchBotPrStatuses: vi.fn(merged.searchBotPrStatuses),
     getFileContent: vi.fn(merged.getFileContent),
+    merge: vi.fn(merged.merge),
     enableAutoMerge: vi.fn(merged.enableAutoMerge),
     approve: vi.fn(merged.approve)
   }

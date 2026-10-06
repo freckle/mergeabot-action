@@ -2,12 +2,17 @@ import type {Strategy} from './inputs.js'
 
 export type ReviewDecision = 'CHANGES_REQUESTED' | 'APPROVED' | 'REVIEW_REQUIRED' | null
 
+// https://docs.github.com/en/graphql/reference/pulls#enum-mergestatestatus
+export type MergeStateStatus =
+  'BEHIND' | 'BLOCKED' | 'CLEAN' | 'DIRTY' | 'DRAFT' | 'HAS_HOOKS' | 'UNKNOWN' | 'UNSTABLE'
+
 export interface QuarantinedPr {
   id: string
   number: number
   title: string
   createdAt: string
   reviewDecision: ReviewDecision
+  mergeStateStatus: MergeStateStatus
 }
 
 interface RequestedReviewers {
@@ -36,6 +41,7 @@ export interface GitHubClient {
   searchBotPrStatuses(query: string): Promise<BotPrStatus[]>
   // null when the file doesn't exist.
   getFileContent(path: string): Promise<string | null>
+  merge(pullRequestId: string, strategy: Strategy): Promise<void>
   enableAutoMerge(pullRequestId: string, strategy: Strategy): Promise<void>
   approve(prNumber: number): Promise<void>
 }
