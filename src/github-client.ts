@@ -1,7 +1,13 @@
 import * as github from '@actions/github'
 
 import type {Strategy} from './inputs.js'
-import type {BotPrStatus, GitHubClient, QuarantinedPr, ReviewDecision} from './client.js'
+import type {
+  BotPrStatus,
+  GitHubClient,
+  MergeStateStatus,
+  QuarantinedPr,
+  ReviewDecision
+} from './client.js'
 
 type OctokitOptions = Parameters<typeof github.getOctokit>[1]
 
@@ -18,6 +24,7 @@ const SEARCH_QUERY = `
           title
           createdAt
           reviewDecision
+          mergeStateStatus
         }
       }
       pageInfo {
@@ -56,6 +63,16 @@ const BOT_PR_STATUS_QUERY = `
   }
 `
 
+const MERGE_MUTATION = `
+  mutation ($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
+    mergePullRequest(
+      input: { pullRequestId: $pullRequestId, mergeMethod: $mergeMethod }
+    ) {
+      clientMutationId
+    }
+  }
+`
+
 const ENABLE_AUTO_MERGE_MUTATION = `
   mutation ($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
     enablePullRequestAutoMerge(
@@ -87,6 +104,7 @@ type SearchNode = {
   title: string
   createdAt: string
   reviewDecision: ReviewDecision
+  mergeStateStatus: MergeStateStatus
 }
 
 type BotPrStatusNode = {
@@ -203,7 +221,8 @@ export function createGitHubClient(
         number: node.number,
         title: node.title,
         createdAt: node.createdAt,
-        reviewDecision: node.reviewDecision
+        reviewDecision: node.reviewDecision,
+        mergeStateStatus: node.mergeStateStatus
       }))
     },
 
@@ -238,6 +257,13 @@ export function createGitHubClient(
         }
         throw error
       }
+    },
+
+    async merge(pullRequestId, strategy) {
+      await octokit.graphql(MERGE_MUTATION, {
+        pullRequestId,
+        mergeMethod: MERGE_METHODS[strategy]
+      })
     },
 
     async enableAutoMerge(pullRequestId, strategy) {
