@@ -212,6 +212,18 @@ describe('run / scheduled scan', () => {
     expect(client.approve).not.toHaveBeenCalled()
   })
 
+  it('merges PRs in clean status', async () => {
+    const client = fakeClient({
+      searchQuarantinedPrs: async () => [pr({id: 'PR_1', mergeStateStatus: 'CLEAN'})]
+    })
+
+    await run(inputs({strategy: 'squash'}), scheduleContext, client, NOW)
+
+    expect(client.merge).toHaveBeenCalledTimes(1)
+    expect(client.enableAutoMerge).not.toHaveBeenCalled()
+    expect(client.approve).not.toHaveBeenCalled()
+  })
+
   it('only enables auto-merge for already-approved PRs', async () => {
     const client = fakeClient({
       searchQuarantinedPrs: async () => [pr({id: 'PR_1', reviewDecision: 'APPROVED'})]
