@@ -44,6 +44,7 @@ function pr(overrides: Partial<QuarantinedPr> = {}): QuarantinedPr {
     title: 'Bump foo from 1.0.0 to 1.0.1',
     createdAt: '2024-01-01T00:00:00Z',
     reviewDecision: null,
+    mergeStateStatus: 'BLOCKED',
     ...overrides
   }
 }
