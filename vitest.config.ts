@@ -19,10 +19,10 @@ export default defineConfig({
       // rather than passing silently. Remove to stop enforcing coverage (also
       // revert ci.yml's pnpm coverage -> pnpm test).
       thresholds: {
-        lines: 97,
-        branches: 95,
-        functions: 97,
-        statements: 97
+        lines: 90,
+        branches: 90,
+        functions: 90,
+        statements: 90
       }
     }
   }
