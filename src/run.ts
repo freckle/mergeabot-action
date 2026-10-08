@@ -97,9 +97,14 @@ As long as that's OK, no other action is necessary.
 
 async function scanForQuarantinedPrs(
   inputs: Inputs,
+  context: EventContext,
   client: GitHubClient,
   now: number
 ): Promise<void> {
+  if (context.eventName == 'pull_request') {
+    return
+  }
+
   const since = formatDate(now - inputs.quarantineDays * DAY_MS)
   const query = buildSearchQuery(inputs.owner, inputs.repo, inputs.botAuthors, since)
   const prs = await client.searchQuarantinedPrs(query)
@@ -180,11 +185,6 @@ export async function run(
     return
   }
 
-  if (context.eventName !== 'pull_request') {
-    await scanForQuarantinedPrs(inputs, client, now)
-
-    if (inputs.escalate) {
-      await escalateFailingPrs(inputs, client)
-    }
-  }
+  await scanForQuarantinedPrs(inputs, context, client, now)
+  await escalateFailingPrs(inputs, context, client)
 }
