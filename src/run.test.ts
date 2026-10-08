@@ -129,7 +129,7 @@ describe('run / bot PR events', () => {
     expect(client.searchQuarantinedPrs).not.toHaveBeenCalled()
   })
 
-  it("falls through to the scan when the bot PR's title is excluded", async () => {
+  it("does not fall through to the scan when the bot PR's title is excluded", async () => {
     const client = fakeClient()
 
     await run(
@@ -141,10 +141,10 @@ describe('run / bot PR events', () => {
 
     expect(client.listPrFiles).not.toHaveBeenCalled()
     expect(client.createComment).not.toHaveBeenCalled()
-    expect(client.searchQuarantinedPrs).toHaveBeenCalledTimes(1)
+    expect(client.searchQuarantinedPrs).not.toHaveBeenCalled()
   })
 
-  it('falls through to the scan when the bot PR touches workflow files', async () => {
+  it('does not fall through to the scan when the bot PR touches workflow files', async () => {
     const client = fakeClient({
       listPrFiles: async () => ['.github/workflows/ci.yml']
     })
@@ -152,15 +152,15 @@ describe('run / bot PR events', () => {
     await run(inputs(), openedContext(), client, NOW)
 
     expect(client.createComment).not.toHaveBeenCalled()
-    expect(client.searchQuarantinedPrs).toHaveBeenCalledTimes(1)
+    expect(client.searchQuarantinedPrs).not.toHaveBeenCalled()
   })
 
-  it('runs the scan for pull_request events from non-bot actors', async () => {
+  it('does not run the scan for pull_request events', async () => {
     const client = fakeClient()
 
     await run(inputs({actor: 'some-human'}), openedContext(), client, NOW)
 
-    expect(client.searchQuarantinedPrs).toHaveBeenCalledTimes(1)
+    expect(client.searchQuarantinedPrs).not.toHaveBeenCalled()
   })
 })
 

@@ -178,17 +178,15 @@ export async function run(
   now: number = Date.now()
 ): Promise<void> {
   if (isBotPrEvent(context.eventName, inputs.actor, inputs.botAuthors)) {
-    const handled = await handleBotPrEvent(inputs, context, client, now)
-    if (handled) {
-      return
-    }
+    await handleBotPrEvent(inputs, context, client, now)
+    return
   }
 
-  await scanForQuarantinedPrs(inputs, client, now)
+  if (context.eventName !== 'pull_request') {
+    await scanForQuarantinedPrs(inputs, client, now)
 
-  // Escalation is a sweep over all open bot PRs, not a reaction to one, so it
-  // only runs on scheduled (or manual) events.
-  if (inputs.escalate && context.eventName !== 'pull_request') {
-    await escalateFailingPrs(inputs, client)
+    if (inputs.escalate) {
+      await escalateFailingPrs(inputs, client)
+    }
   }
 }
