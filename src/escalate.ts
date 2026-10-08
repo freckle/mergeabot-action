@@ -1,6 +1,7 @@
 import * as core from '@actions/core'
 
 import type {Inputs} from './inputs.js'
+import type {EventContext} from './context.js'
 import type {GitHubClient} from './client.js'
 import {parseCodeowners, resolveTeamForPaths, type CodeownersRule} from './codeowners.js'
 import {ESCALATION_MARKER, hasEscalationComment} from './predicates.js'
@@ -31,7 +32,15 @@ async function loadCodeowners(inputs: Inputs, client: GitHubClient): Promise<Cod
   return rules
 }
 
-export async function escalateFailingPrs(inputs: Inputs, client: GitHubClient): Promise<void> {
+export async function escalateFailingPrs(
+  inputs: Inputs,
+  context: EventContext,
+  client: GitHubClient
+): Promise<void> {
+  if (context.eventName == 'pull_request' || !inputs.escalate) {
+    return
+  }
+
   const rules = await loadCodeowners(inputs, client)
 
   const query = buildEscalationSearchQuery(inputs.owner, inputs.repo, inputs.botAuthors)

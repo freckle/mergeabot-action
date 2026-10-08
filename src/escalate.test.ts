@@ -2,6 +2,7 @@ import {describe, expect, it, vi} from 'vitest'
 
 import type {BotPrStatus} from './client.js'
 import type {Inputs} from './inputs.js'
+import type {EventContext} from './context.js'
 import {escalateFailingPrs} from './escalate.js'
 import {fakeClient} from './fake-github-client.js'
 import {ESCALATION_MARKER} from './predicates.js'
@@ -38,6 +39,16 @@ function inputs(overrides: Partial<Inputs> = {}): Inputs {
   }
 }
 
+function context(overrides: Partial<EventContext> = {}): EventContext {
+  return {
+    eventName: 'scheduled',
+    prAction: undefined,
+    prNumber: undefined,
+    prTitle: undefined,
+    ...overrides
+  }
+}
+
 function status(overrides: Partial<BotPrStatus> = {}): BotPrStatus {
   return {
     number: 1,
@@ -57,7 +68,7 @@ describe('escalateFailingPrs / candidate selection', () => {
       searchBotPrStatuses: async () => [status(overrides)]
     })
 
-    await escalateFailingPrs(inputs(), client)
+    await escalateFailingPrs(inputs(), context(), client)
 
     expect(client.listPrFiles).not.toHaveBeenCalled()
     expect(client.requestReviewers).not.toHaveBeenCalled()
@@ -69,7 +80,7 @@ describe('escalateFailingPrs / candidate selection', () => {
       searchBotPrStatuses: async () => [status({number: 7})]
     })
 
-    await escalateFailingPrs(inputs(), client)
+    await escalateFailingPrs(inputs(), context(), client)
 
     expect(client.listPrFiles).toHaveBeenCalledTimes(1)
     expect(client.listPrFiles).toHaveBeenCalledWith(7)
@@ -78,7 +89,7 @@ describe('escalateFailingPrs / candidate selection', () => {
   it('does not throw when the search finds nothing', async () => {
     const client = fakeClient()
 
-    await expect(escalateFailingPrs(inputs(), client)).resolves.toBeUndefined()
+    await expect(escalateFailingPrs(inputs(), context(), client)).resolves.toBeUndefined()
   })
 })
 
@@ -90,7 +101,7 @@ describe('escalateFailingPrs / team routing', () => {
       listPrFiles: async () => ['docs/intro.md']
     })
 
-    await escalateFailingPrs(inputs(), client)
+    await escalateFailingPrs(inputs(), context(), client)
 
     expect(client.getFileContent).toHaveBeenCalledWith('.github/CODEOWNERS')
     expect(client.requestReviewers).toHaveBeenCalledTimes(1)
@@ -108,7 +119,7 @@ describe('escalateFailingPrs / team routing', () => {
       listPrFiles: async () => ['docs/intro.md']
     })
 
-    await escalateFailingPrs(inputs({escalationCommentSuffix: 'cc @some-team'}), client)
+    await escalateFailingPrs(inputs({escalationCommentSuffix: 'cc @some-team'}), context(), client)
 
     const [, body] = client.createComment.mock.calls[0]
     expect(body).toContain('cc @some-team')
@@ -121,7 +132,7 @@ describe('escalateFailingPrs / team routing', () => {
       listPrFiles: async () => ['docs/intro.md']
     })
 
-    await escalateFailingPrs(inputs({escalationCommentSuffix: ''}), client)
+    await escalateFailingPrs(inputs({escalationCommentSuffix: ''}), context(), client)
 
     const [, body] = client.createComment.mock.calls[0]
     expect(body).toBe(
@@ -144,7 +155,7 @@ describe('escalateFailingPrs / team routing', () => {
       listPrFiles: async () => ['docs/intro.md', 'src/main.ts']
     })
 
-    await escalateFailingPrs(inputs(), client)
+    await escalateFailingPrs(inputs(), context(), client)
 
     expect(client.requestReviewers).toHaveBeenCalledWith(1, [], ['team-fallback'])
   })
@@ -156,7 +167,7 @@ describe('escalateFailingPrs / team routing', () => {
       listPrFiles: async () => ['src/main.ts']
     })
 
-    await escalateFailingPrs(inputs(), client)
+    await escalateFailingPrs(inputs(), context(), client)
 
     expect(client.requestReviewers).toHaveBeenCalledWith(1, [], ['team-fallback'])
   })
@@ -168,7 +179,7 @@ describe('escalateFailingPrs / team routing', () => {
       listPrFiles: async () => ['docs/intro.md']
     })
 
-    await escalateFailingPrs(inputs(), client)
+    await escalateFailingPrs(inputs(), context(), client)
 
     expect(client.requestReviewers).toHaveBeenCalledWith(1, [], ['team-fallback'])
   })
@@ -180,7 +191,7 @@ describe('escalateFailingPrs / team routing', () => {
       listPrFiles: async () => ['src/main.ts']
     })
 
-    await escalateFailingPrs(inputs({escalationFallbackTeam: ''}), client)
+    await escalateFailingPrs(inputs({escalationFallbackTeam: ''}), context(), client)
 
     expect(client.listCommentBodies).not.toHaveBeenCalled()
     expect(client.requestReviewers).not.toHaveBeenCalled()
@@ -195,7 +206,7 @@ describe('escalateFailingPrs / idempotency and dry-run', () => {
       listCommentBodies: async () => [`${ESCALATION_MARKER}\nescalated`]
     })
 
-    await escalateFailingPrs(inputs(), client)
+    await escalateFailingPrs(inputs(), context(), client)
 
     expect(client.requestReviewers).not.toHaveBeenCalled()
     expect(client.createComment).not.toHaveBeenCalled()
@@ -206,7 +217,7 @@ describe('escalateFailingPrs / idempotency and dry-run', () => {
       searchBotPrStatuses: async () => [status()]
     })
 
-    await escalateFailingPrs(inputs({dryRun: true}), client)
+    await escalateFailingPrs(inputs({dryRun: true}), context(), client)
 
     expect(client.listPrFiles).toHaveBeenCalledTimes(1)
     expect(client.listCommentBodies).toHaveBeenCalledTimes(1)
@@ -221,7 +232,7 @@ describe('escalateFailingPrs / idempotency and dry-run', () => {
       listPrFiles: async prNumber => (prNumber === 7 ? ['docs/intro.md'] : ['src/main.ts'])
     })
 
-    await escalateFailingPrs(inputs({escalationFallbackTeam: ''}), client)
+    await escalateFailingPrs(inputs({escalationFallbackTeam: ''}), context(), client)
 
     expect(client.requestReviewers).toHaveBeenCalledTimes(1)
     expect(client.requestReviewers).toHaveBeenCalledWith(7, [], ['team-docs'])
@@ -241,7 +252,7 @@ describe('escalateFailingPrs / per-PR failure isolation', () => {
       }
     })
 
-    await expect(escalateFailingPrs(inputs(), client)).rejects.toThrow(
+    await expect(escalateFailingPrs(inputs(), context(), client)).rejects.toThrow(
       'Failed to escalate some PRs'
     )
 
