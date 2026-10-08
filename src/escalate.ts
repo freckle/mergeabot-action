@@ -37,7 +37,7 @@ export async function escalateFailingPrs(
   context: EventContext,
   client: GitHubClient
 ): Promise<void> {
-  if (context.eventName == 'pull_request' || !inputs.escalate) {
+  if (context.eventName === 'pull_request' || !inputs.escalate) {
     return
   }
 

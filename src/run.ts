@@ -105,7 +105,7 @@ async function scanForQuarantinedPrs(
   client: GitHubClient,
   now: number
 ): Promise<void> {
-  if (context.eventName == 'pull_request') {
+  if (context.eventName === 'pull_request') {
     return
   }
 
@@ -132,7 +132,7 @@ async function scanForQuarantinedPrs(
       continue
     }
 
-    if (pr.mergeStateStatus == 'CLEAN') {
+    if (pr.mergeStateStatus === 'CLEAN') {
       core.info(`Merging PR ${chalk.gray('(requirements already met)')}`)
       await unlessDryRun(inputs, async () => {
         await client.merge(pr.id, inputs.strategy)
