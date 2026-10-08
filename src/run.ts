@@ -42,6 +42,10 @@ async function handleBotPrEvent(
   client: GitHubClient,
   now: number
 ): Promise<void> {
+  if (!isBotPrEvent(context.eventName, inputs.actor, inputs.botAuthors)) {
+    return
+  }
+
   const number = context.prNumber
 
   if (number === undefined) {
@@ -180,11 +184,7 @@ export async function run(
   client: GitHubClient,
   now: number = Date.now()
 ): Promise<void> {
-  if (isBotPrEvent(context.eventName, inputs.actor, inputs.botAuthors)) {
-    await handleBotPrEvent(inputs, context, client, now)
-    return
-  }
-
+  await handleBotPrEvent(inputs, context, client, now)
   await scanForQuarantinedPrs(inputs, context, client, now)
   await escalateFailingPrs(inputs, context, client)
 }
