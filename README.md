@@ -67,14 +67,8 @@ an explicit `permissions` key to use the above approach.
 
 ```yaml
 permissions:
-  contents: write
   pull-requests: write
 ```
-
-**NOTE**: `contents:write` is required because Mergeabot will always do its
-normal thing of finding other Dependabot PRs and handling them. This may be
-surprising on PR events, but we find it useful. Patches welcome to make this
-behavior optional.
 
 ## Complete Example
 
