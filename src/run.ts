@@ -41,12 +41,12 @@ async function handleBotPrEvent(
   context: EventContext,
   client: GitHubClient,
   now: number
-): Promise<boolean> {
+): Promise<void> {
   const number = context.prNumber
 
   if (number === undefined) {
     core.warning('Skipping PR because number is not known')
-    return false
+    return
   }
 
   const title = context.prTitle ?? ''
@@ -55,14 +55,14 @@ async function handleBotPrEvent(
     core.warning(
       `Skipping PR based on title ${chalk.gray(`(${title} =~ ${inputs.excludeTitleRegex})`)}`
     )
-    return false
+    return
   }
 
   if (touchesWorkflows(await client.listPrFiles(number))) {
     core.warning(
       `Skipping PR because it touches Workflow files ${chalk.gray('(bots cannot merge)')}`
     )
-    return false
+    return
   }
 
   if (context.prAction === 'opened') {
@@ -93,8 +93,6 @@ As long as that's OK, no other action is necessary.
       await client.createComment(number, body)
     })
   }
-
-  return true
 }
 
 async function scanForQuarantinedPrs(
