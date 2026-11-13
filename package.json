@@ -42,7 +42,7 @@
     "action-docs": "^2.5.1",
     "eslint": "^10.14.0",
     "knip": "^6.45.1",
-    "prettier": "^3.9.10",
+    "prettier": "^3.10.1",
     "typescript": "^6.0.3",
     "vitest": "^5.1.0"
   }
